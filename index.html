@@ -1,0 +1,607 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ピーちゃん</title>
+  <style>
+    :root{
+      --bg1:#fff7b8;
+      --bg2:#ffe57a;
+      --card:rgba(255,252,230,.92);
+      --text:#5b4b00;
+      --sub:#857318;
+      --btn1:#ffd84d;
+      --btn2:#ffca1f;
+      --line:#eadb89;
+    }
+
+    *{ box-sizing:border-box; }
+
+    body{
+      margin:0;
+      min-height:100vh;
+      font-family:-apple-system,BlinkMacSystemFont,"Hiragino Sans","Yu Gothic","Meiryo",sans-serif;
+      background:linear-gradient(180deg,var(--bg1),var(--bg2));
+      color:var(--text);
+      display:flex;
+      justify-content:center;
+      align-items:center;
+      padding:16px;
+    }
+
+    .app{
+      width:min(100%, 560px);
+      background:var(--card);
+      border:1px solid rgba(234,219,137,.9);
+      border-radius:28px;
+      padding:20px 16px 18px;
+      box-shadow:0 14px 36px rgba(120,96,0,.12);
+      text-align:center;
+      backdrop-filter: blur(4px);
+    }
+
+    .time{
+      font-size:34px;
+      font-weight:700;
+      letter-spacing:.03em;
+      margin-top:2px;
+    }
+
+    .date{
+      margin-top:4px;
+      color:var(--sub);
+      font-size:14px;
+    }
+
+    .birdWrap{
+      margin:16px auto 8px;
+      width:100%;
+      display:flex;
+      justify-content:center;
+      align-items:center;
+      min-height:260px;
+      overflow:hidden;
+    }
+
+    .bird{
+      width:min(92vw, 360px);
+      max-width:360px;
+      aspect-ratio: 4 / 3;
+      object-fit:cover;
+      border-radius:24px;
+      border:3px solid rgba(255,255,255,.7);
+      box-shadow:0 10px 24px rgba(0,0,0,.10);
+      transition:transform .25s ease, opacity .25s ease, filter .25s ease;
+      user-select:none;
+      -webkit-user-drag:none;
+    }
+
+    .bird.listening{
+      animation:listeningBob 1s infinite ease-in-out;
+    }
+
+    .bird.happy{
+      animation:happyBounce .6s ease;
+    }
+
+    .bird.talk{
+      animation:talkPulse .42s ease 2;
+    }
+
+    .bird.sleeping{
+      opacity:.92;
+      filter:saturate(.92);
+    }
+
+    @keyframes listeningBob{
+      0%{ transform:translateY(0); }
+      50%{ transform:translateY(-7px); }
+      100%{ transform:translateY(0); }
+    }
+
+    @keyframes happyBounce{
+      0%{ transform:scale(1); }
+      35%{ transform:scale(1.08); }
+      70%{ transform:scale(.97); }
+      100%{ transform:scale(1); }
+    }
+
+    @keyframes talkPulse{
+      0%{ transform:scale(1); }
+      50%{ transform:scale(1.04); }
+      100%{ transform:scale(1); }
+    }
+
+    .btn{
+      appearance:none;
+      border:none;
+      border-radius:999px;
+      background:linear-gradient(180deg,var(--btn1),var(--btn2));
+      color:#5c4700;
+      font-size:22px;
+      font-weight:700;
+      padding:16px 26px;
+      min-width:260px;
+      box-shadow:0 8px 18px rgba(181,140,0,.18);
+      cursor:pointer;
+      transition:transform .12s ease, box-shadow .12s ease;
+    }
+
+    .btn:active{
+      transform:scale(.98);
+    }
+
+    .btn.listening{
+      background:linear-gradient(180deg,#ffb347,#ff9947);
+      box-shadow:0 8px 22px rgba(255,140,0,.22);
+    }
+
+    .status{
+      margin-top:14px;
+      min-height:24px;
+      font-size:15px;
+      color:var(--sub);
+    }
+
+    .speechBox{
+      margin-top:14px;
+      background:#fffef6;
+      border:1px solid var(--line);
+      border-radius:20px;
+      padding:14px 14px 12px;
+      text-align:left;
+    }
+
+    .label{
+      font-size:12px;
+      color:var(--sub);
+      margin-bottom:8px;
+    }
+
+    .log{
+      font-size:22px;
+      line-height:1.6;
+      min-height:42px;
+      word-break:break-word;
+    }
+
+    .heard{
+      margin-top:10px;
+      padding-top:10px;
+      border-top:1px dashed var(--line);
+      color:#7c6a1a;
+      font-size:14px;
+      line-height:1.5;
+      min-height:22px;
+      word-break:break-word;
+    }
+
+    .tiny{
+      margin-top:14px;
+      color:var(--sub);
+      font-size:12px;
+      line-height:1.6;
+    }
+
+    .devbar{
+      margin-top:12px;
+      display:flex;
+      justify-content:center;
+      gap:8px;
+      flex-wrap:wrap;
+    }
+
+    .miniBtn{
+      appearance:none;
+      border:1px solid var(--line);
+      background:#fff9d7;
+      color:#6e5a00;
+      border-radius:999px;
+      padding:9px 12px;
+      font-size:12px;
+      cursor:pointer;
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <div class="time" id="timeText">--:--</div>
+    <div class="date" id="dateText">----</div>
+
+    <div class="birdWrap">
+      <img id="bird" class="bird sleeping" src="sleep.jpg" alt="ピーちゃん">
+    </div>
+
+    <button id="talkBtn" class="btn">ピーちゃんと話す</button>
+
+    <div id="status" class="status">押すと10秒だけ耳をすませます</div>
+
+    <div class="speechBox">
+      <div class="label">ピーちゃん</div>
+      <div id="log" class="log">ピー</div>
+      <div id="heard" class="heard">まだ聞いていません</div>
+    </div>
+
+    <div class="tiny">
+      ボタンを押した時だけ聞きます。<br>
+      10秒間お話がなければ、自動で聞くのをやめます。
+    </div>
+
+    <div class="devbar">
+      <button id="resetBtn" class="miniBtn">記憶リセット</button>
+      <button id="peekBtn" class="miniBtn">覚えた言葉を見る</button>
+    </div>
+  </div>
+
+  <script>
+    const STORAGE_KEY = "pichan_memory_v2";
+
+    const IMAGE_MAP = {
+      listen: "listen.jpg",
+      happy: "happy.jpg",
+      sleep: "sleep.jpg"
+    };
+
+    const memory = loadMemory();
+
+    function loadMemory() {
+      try {
+        const raw = localStorage.getItem(STORAGE_KEY);
+        if (!raw) {
+          return {
+            words: {},
+            learned: []
+          };
+        }
+        const parsed = JSON.parse(raw);
+        return {
+          words: parsed.words || {},
+          learned: Array.isArray(parsed.learned) ? parsed.learned : []
+        };
+      } catch {
+        return { words: {}, learned: [] };
+      }
+    }
+
+    function saveMemory() {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(memory));
+    }
+
+    const birdEl = document.getElementById("bird");
+    const talkBtn = document.getElementById("talkBtn");
+    const statusEl = document.getElementById("status");
+    const logEl = document.getElementById("log");
+    const heardEl = document.getElementById("heard");
+    const timeText = document.getElementById("timeText");
+    const dateText = document.getElementById("dateText");
+    const resetBtn = document.getElementById("resetBtn");
+    const peekBtn = document.getElementById("peekBtn");
+
+    let recognition = null;
+    let isListening = false;
+    let silenceTimer = null;
+    let sessionTranscript = "";
+    let sleepBackTimer = null;
+
+    function updateClock() {
+      const now = new Date();
+      timeText.textContent = now.toLocaleTimeString("ja-JP", {
+        hour: "2-digit",
+        minute: "2-digit"
+      });
+      dateText.textContent = now.toLocaleDateString("ja-JP", {
+        year: "numeric",
+        month: "long",
+        day: "numeric",
+        weekday: "long"
+      });
+    }
+    updateClock();
+    setInterval(updateClock, 1000);
+
+    function setStatus(text) {
+      statusEl.textContent = text;
+    }
+
+    function setHeard(text) {
+      heardEl.textContent = text || "まだ聞いていません";
+    }
+
+    function setBird(state) {
+      clearTimeout(sleepBackTimer);
+
+      if (state === "listen") {
+        birdEl.src = IMAGE_MAP.listen;
+        birdEl.classList.remove("happy", "sleeping");
+        birdEl.classList.add("listening");
+        return;
+      }
+
+      if (state === "happy") {
+        birdEl.src = IMAGE_MAP.happy;
+        birdEl.classList.remove("listening", "sleeping");
+        birdEl.classList.add("happy");
+        sleepBackTimer = setTimeout(() => {
+          setBird("sleep");
+        }, 1800);
+        return;
+      }
+
+      birdEl.src = IMAGE_MAP.sleep;
+      birdEl.classList.remove("listening", "happy");
+      birdEl.classList.add("sleeping");
+    }
+
+    function animateTalk() {
+      birdEl.classList.remove("talk");
+      void birdEl.offsetWidth;
+      birdEl.classList.add("talk");
+      setTimeout(() => {
+        birdEl.classList.remove("talk");
+      }, 500);
+    }
+
+    function setBirdListening(on) {
+      talkBtn.classList.toggle("listening", on);
+      talkBtn.textContent = on ? "聞いています…" : "ピーちゃんと話す";
+      if (on) {
+        setBird("listen");
+      }
+    }
+
+    function speak(text) {
+      logEl.textContent = text;
+      animateTalk();
+
+      if ("speechSynthesis" in window) {
+        try {
+          window.speechSynthesis.cancel();
+          const u = new SpeechSynthesisUtterance(text);
+          u.lang = "ja-JP";
+          u.pitch = 1.9;
+          u.rate = 1.12;
+          u.volume = 1.0;
+          window.speechSynthesis.speak(u);
+        } catch (e) {
+          console.log(e);
+        }
+      }
+    }
+
+    function splitWords(text) {
+      return text
+        .split(/[\s、。！？,.!?\n\r]+/)
+        .map(w => w.trim())
+        .filter(Boolean)
+        .filter(w => w.length <= 12);
+    }
+
+    function processLearn(text) {
+      const words = splitWords(text);
+      const newlyLearned = [];
+
+      for (const w of words) {
+        memory.words[w] = (memory.words[w] || 0) + 1;
+        if (memory.words[w] >= 10 && !memory.learned.includes(w)) {
+          memory.learned.push(w);
+          newlyLearned.push(w);
+        }
+      }
+
+      saveMemory();
+      return { words, newlyLearned };
+    }
+
+    function getWeightedLearnedWord() {
+      if (memory.learned.length === 0) return null;
+
+      let total = 0;
+      for (const w of memory.learned) {
+        total += (memory.words[w] || 1);
+      }
+
+      let r = Math.random() * total;
+
+      for (const w of memory.learned) {
+        r -= (memory.words[w] || 1);
+        if (r <= 0) return w;
+      }
+
+      return memory.learned[0];
+    }
+
+    function speakLearnedWeighted() {
+      const word = getWeightedLearnedWord();
+      if (!word) {
+        speak("ピー");
+        return;
+      }
+      speak(word);
+    }
+
+    function reactAfterListening(transcript) {
+      const cleaned = (transcript || "").trim();
+      setHeard(cleaned || "聞き取れませんでした");
+
+      if (!cleaned) {
+        speak("ピー");
+        setBird("sleep");
+        setStatus("聞き取れませんでした");
+        return;
+      }
+
+      const { newlyLearned } = processLearn(cleaned);
+
+      if (newlyLearned.length > 0) {
+        setBird("happy");
+        speak("ピー！");
+        setStatus("新しく覚えました");
+        return;
+      }
+
+      if (memory.learned.length === 0) {
+        speak("ピー");
+        setBird("sleep");
+        setStatus("聞いたよ");
+        return;
+      }
+
+      if (Math.random() < 0.7) {
+        speak("ピー");
+        setBird("sleep");
+        setStatus("聞いたよ");
+      } else {
+        speakLearnedWeighted();
+        setBird("sleep");
+        setStatus("覚えた言葉を話しました");
+      }
+    }
+
+    function restartSilenceTimer() {
+      clearTimeout(silenceTimer);
+      silenceTimer = setTimeout(() => {
+        if (isListening && recognition) {
+          setStatus("10秒話がなかったので終わります");
+          recognition.stop();
+        }
+      }, 10000);
+    }
+
+    function setupRecognition() {
+      const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+
+      if (!SR) {
+        setStatus("このiPhone/ブラウザでは音声入力が使えません");
+        talkBtn.disabled = true;
+        talkBtn.style.opacity = ".6";
+        return;
+      }
+
+      recognition = new SR();
+      recognition.lang = "ja-JP";
+      recognition.interimResults = true;
+      recognition.continuous = true;
+      recognition.maxAlternatives = 1;
+
+      recognition.onstart = () => {
+        isListening = true;
+        sessionTranscript = "";
+        setBirdListening(true);
+        setStatus("どうぞお話しください");
+        restartSilenceTimer();
+      };
+
+      recognition.onresult = (event) => {
+        let interim = "";
+        let finalChunk = "";
+
+        for (let i = event.resultIndex; i < event.results.length; i++) {
+          const t = event.results[i][0].transcript;
+          if (event.results[i].isFinal) {
+            finalChunk += t + " ";
+          } else {
+            interim += t;
+          }
+        }
+
+        if (finalChunk.trim()) {
+          sessionTranscript += finalChunk;
+          restartSilenceTimer();
+        }
+
+        if (interim.trim()) {
+          restartSilenceTimer();
+          setHeard("聞き取り中： " + interim.trim());
+        } else if (sessionTranscript.trim()) {
+          setHeard("聞いたことば： " + sessionTranscript.trim());
+        }
+      };
+
+      recognition.onerror = (event) => {
+        console.log("speech error:", event.error);
+
+        if (event.error === "not-allowed") {
+          setStatus("マイクの許可が必要です");
+        } else if (event.error === "no-speech") {
+          setStatus("声が聞こえませんでした");
+        } else {
+          setStatus("音声入力エラー：" + event.error);
+        }
+      };
+
+      recognition.onend = () => {
+        clearTimeout(silenceTimer);
+        isListening = false;
+        setBirdListening(false);
+
+        const finalText = sessionTranscript.trim();
+        reactAfterListening(finalText);
+      };
+    }
+
+    setupRecognition();
+
+    talkBtn.addEventListener("click", () => {
+      if (!recognition) return;
+
+      if (isListening) {
+        recognition.stop();
+        return;
+      }
+
+      try {
+        window.speechSynthesis?.cancel();
+        sessionTranscript = "";
+        setHeard("聞いています…");
+        recognition.start();
+      } catch (e) {
+        console.log(e);
+        setStatus("マイク開始に失敗しました");
+      }
+    });
+
+    resetBtn.addEventListener("click", () => {
+      if (!confirm("ピーちゃんの記憶を消しますか？")) return;
+      memory.words = {};
+      memory.learned = [];
+      saveMemory();
+      logEl.textContent = "ピー";
+      setHeard("記憶を消しました");
+      setStatus("リセットしました");
+      setBird("sleep");
+      speak("ピー");
+    });
+
+    peekBtn.addEventListener("click", () => {
+      if (memory.learned.length === 0) {
+        alert("まだ覚えた言葉はありません。");
+        return;
+      }
+
+      const list = memory.learned
+        .map(w => `${w}（${memory.words[w] || 0}回）`)
+        .join("\n");
+
+      alert("覚えた言葉\n\n" + list);
+    });
+
+    setInterval(() => {
+      if (isListening) return;
+      if (document.hidden) return;
+
+      if (memory.learned.length === 0) {
+        speak("ピー");
+      } else {
+        speakLearnedWeighted();
+      }
+      setBird("sleep");
+      setStatus("ピーちゃんがひとこと言いました");
+    }, 600000);
+
+    setStatus("押すと10秒だけ耳をすませます");
+    setHeard("まだ聞いていません");
+    setBird("sleep");
+  </script>
+</body>
+</html>

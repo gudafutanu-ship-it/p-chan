@@ -184,10 +184,11 @@
 
     <div class="info">
       ・昼はちょこちょこ動きます<br>
-      ・昼はときどき「ピー」と鳴きます<br>
+      ・昼はときどき鳴きます<br>
       ・覚えた言葉を独り言でつぶやきます<br>
       ・夜は静かに寝ます<br>
-      ・覚えた内容は保存されます
+      ・覚えた内容は保存されます<br>
+      ・鳴き声は p_chan.wav を使います
     </div>
 
     <div class="memoryBox">
@@ -206,7 +207,8 @@
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     const synth = window.speechSynthesis;
 
-    const STORAGE_KEY = "pichan_memory_v2";
+    const STORAGE_KEY = "pichan_memory_v3";
+    const CHIRP_FILE = "p_chan.wav";
 
     let recognition = null;
     let isListening = false;
@@ -230,6 +232,9 @@
     let lastHumanInteractionAt = 0;
     let lastSoloTalkAt = 0;
     let lastChirpAt = 0;
+
+    let audioUnlocked = false;
+    let chirpAudio = null;
 
     function setStatus(main, sub = "") {
       statusEl.innerHTML = `${main}${sub ? `<div class="sub">${sub}</div>` : ""}`;
@@ -500,9 +505,43 @@
       return choice ? choice[0] : "";
     }
 
-    function getRandomKnownChirp() {
+    function getRandomKnownChirpText() {
       const list = ["ピー", "ピッ", "ピー！", "ピピッ"];
       return list[Math.floor(Math.random() * list.length)];
+    }
+
+    function ensureAudioObject() {
+      if (!chirpAudio) {
+        chirpAudio = new Audio(CHIRP_FILE);
+        chirpAudio.preload = "auto";
+      }
+    }
+
+    function unlockAudio() {
+      ensureAudioObject();
+
+      try {
+        chirpAudio.volume = 0;
+        chirpAudio.currentTime = 0;
+        const p = chirpAudio.play();
+        if (p && typeof p.then === "function") {
+          p.then(() => {
+            chirpAudio.pause();
+            chirpAudio.currentTime = 0;
+            chirpAudio.volume = 1;
+            audioUnlocked = true;
+          }).catch(() => {
+            chirpAudio.volume = 1;
+          });
+        } else {
+          chirpAudio.pause();
+          chirpAudio.currentTime = 0;
+          chirpAudio.volume = 1;
+          audioUnlocked = true;
+        }
+      } catch (e) {
+        chirpAudio.volume = 1;
+      }
     }
 
     function speak(text, onEnd) {
@@ -533,12 +572,38 @@
       synth.speak(utter);
     }
 
+    function playChirpSound(onEnd, fallbackText = "ピー") {
+      ensureAudioObject();
+
+      try {
+        chirpAudio.pause();
+        chirpAudio.currentTime = 0;
+        chirpAudio.volume = 1;
+        chirpAudio.onended = () => {
+          chirpAudio.onended = null;
+          if (onEnd) onEnd();
+        };
+
+        const p = chirpAudio.play();
+
+        if (p && typeof p.then === "function") {
+          p.then(() => {
+            audioUnlocked = true;
+          }).catch(() => {
+            speak(fallbackText.replace(/[！!]/g, ""), onEnd);
+          });
+        }
+      } catch (e) {
+        speak(fallbackText.replace(/[！!]/g, ""), onEnd);
+      }
+    }
+
     function chirp(onEnd, text = "ピー") {
       lastChirpAt = nowMs();
       saveMemory();
       setBirdImage("happy");
       setStatus(text, "返事しています");
-      speak(text.replace(/[！!]/g, ""), onEnd);
+      playChirpSound(onEnd, text);
     }
 
     function goBackToIdle() {
@@ -668,13 +733,13 @@
           } else {
             goBackToIdle();
           }
-        }, getRandomKnownChirp());
+        }, getRandomKnownChirpText());
         return;
       }
 
       chirp(() => {
         goBackToIdle();
-      }, getRandomKnownChirp());
+      }, getRandomKnownChirpText());
     }
 
     function canSoloTalkNow() {
@@ -696,12 +761,12 @@
       lastChirpAt = nowMs();
       saveMemory();
 
-      const chirpText = getRandomKnownChirp();
+      const chirpText = getRandomKnownChirpText();
       setBirdImage("happy");
       setStatus(chirpText, "ひとりで鳴いています");
-      speak(chirpText.replace(/[！!]/g, ""), () => {
+      playChirpSound(() => {
         goBackToIdle();
-      });
+      }, chirpText);
     }
 
     function doSoloMemoryTalk() {
@@ -719,9 +784,15 @@
 
       setBirdImage("happy");
       setStatus(`「${escapeHtml(best)}」`, "独り言をつぶやいています");
-      speak(best, () => {
-        goBackToIdle();
-      });
+
+      // 独り言の前に軽く鳴く
+      playChirpSound(() => {
+        setTimeout(() => {
+          speak(best, () => {
+            goBackToIdle();
+          });
+        }, 160);
+      }, "ピー");
     }
 
     function startSoloTalkLoop() {
@@ -740,9 +811,13 @@
     }
 
     micBtn.addEventListener("click", () => {
+      markHumanInteraction();
+      unlockAudio();
+
       try {
         if (synth) synth.cancel();
       } catch (e) {}
+
       startRecognition();
     });
 
@@ -755,6 +830,7 @@
     });
 
     loadMemory();
+    ensureAudioObject();
     updateIdleMode();
     saveMemory();
     startSoloTalkLoop();

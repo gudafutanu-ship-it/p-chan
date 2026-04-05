@@ -236,7 +236,7 @@
     </div>
 
     <div class="footer">
-      iPhoneでは最初に「ピーちゃんを呼ぶ」を押して、音を準備してから使います。
+      iPhoneでは最初に「ピーちゃんを呼ぶ」を押して、音と読み上げを準備してから使います。
     </div>
   </div>
 
@@ -260,6 +260,7 @@
     let isAwake = false;
     let isListening = false;
     let audioUnlocked = false;
+    let speechReady = false;
     let recognition = null;
     let recognitionSupported = false;
     let memoryItems = [];
@@ -440,10 +441,11 @@
         peepAudio.currentTime = 0;
 
         if ("speechSynthesis" in window) {
-          window.speechSynthesis.cancel();
-          const warm = new SpeechSynthesisUtterance("");
-          warm.volume = 0;
-          window.speechSynthesis.speak(warm);
+          try {
+            const synth = window.speechSynthesis;
+            synth.cancel();
+            synth.resume();
+          } catch (_) {}
         }
 
         audioUnlocked = true;
@@ -472,50 +474,59 @@
     }
 
     function speakText(text) {
-      if (!("speechSynthesis" in window)) return;
+      if (!("speechSynthesis" in window)) return false;
 
       try {
         const synth = window.speechSynthesis;
+
         synth.cancel();
+        synth.resume();
 
-        const doSpeak = () => {
-          const uttr = new SpeechSynthesisUtterance(text);
-          uttr.lang = "ja-JP";
-          uttr.rate = 0.9;
-          uttr.pitch = 1.2;
-          uttr.volume = 1.0;
-
-          const voices = synth.getVoices();
-          const jaVoice =
-            voices.find(v => v.lang === "ja-JP") ||
-            voices.find(v => v.lang && v.lang.startsWith("ja")) ||
-            null;
-
-          if (jaVoice) {
-            uttr.voice = jaVoice;
-          }
-
-          synth.speak(uttr);
-
-          setTimeout(() => {
-            try {
-              if (synth.paused) synth.resume();
-            } catch (_) {}
-          }, 100);
-        };
+        const utter = new SpeechSynthesisUtterance(text);
+        utter.lang = "ja-JP";
+        utter.rate = 0.88;
+        utter.pitch = 1.15;
+        utter.volume = 1.0;
 
         const voices = synth.getVoices();
+        const jaVoice =
+          voices.find(v => v.lang === "ja-JP") ||
+          voices.find(v => v.lang && v.lang.startsWith("ja")) ||
+          null;
 
-        if (voices.length > 0) {
-          setTimeout(doSpeak, 120);
-        } else {
-          synth.onvoiceschanged = () => {
-            setTimeout(doSpeak, 120);
-          };
-          setTimeout(doSpeak, 300);
-        }
+        if (jaVoice) utter.voice = jaVoice;
+
+        utter.onstart = () => {
+          speechReady = true;
+          console.log("speech start:", text);
+        };
+
+        utter.onend = () => {
+          console.log("speech end:", text);
+        };
+
+        utter.onerror = (e) => {
+          console.warn("speech error:", e);
+        };
+
+        synth.speak(utter);
+
+        setTimeout(() => {
+          try { synth.resume(); } catch (_) {}
+        }, 100);
+
+        setTimeout(() => {
+          try { synth.resume(); } catch (_) {}
+        }, 300);
+
+        setTimeout(() => {
+          try { synth.resume(); } catch (_) {}
+        }, 700);
+
+        return true;
       } catch (e) {
         console.warn("読み上げ失敗", e);
+        return false;
       }
     }
 
@@ -658,8 +669,11 @@
           await playPeep();
 
           setTimeout(() => {
+            if ("speechSynthesis" in window) {
+              try { window.speechSynthesis.resume(); } catch (_) {}
+            }
             speakText(reply);
-          }, 250);
+          }, 400);
 
           addLog("ピーちゃん： " + reply, "birdtext");
           setSub("お返事しました");
@@ -746,8 +760,9 @@
       await playPeep();
 
       setTimeout(() => {
-        speakText("ぴーちゃん");
-      }, 250);
+        const okSpeak = speakText("ぴーちゃん");
+        console.log("wake speech:", okSpeak);
+      }, 350);
 
       lastReply = "ぴーちゃん！";
       addLog("ピーちゃん： ぴーちゃん！", "birdtext");
@@ -770,7 +785,11 @@
 
     function goSleep(){
       cancelSpeakTimer();
-      if ("speechSynthesis" in window) window.speechSynthesis.cancel();
+      if ("speechSynthesis" in window) {
+        try {
+          window.speechSynthesis.cancel();
+        } catch (_) {}
+      }
 
       if (recognition && isListening) {
         try { recognition.abort(); } catch (_) {}
@@ -793,8 +812,11 @@
       await playPeep();
 
       setTimeout(() => {
+        if ("speechSynthesis" in window) {
+          try { window.speechSynthesis.resume(); } catch (_) {}
+        }
         speakText(lastReply);
-      }, 250);
+      }, 400);
 
       addLog("ピーちゃん： " + lastReply, "birdtext");
       setSub("もう一度お返事しました");
@@ -811,14 +833,14 @@
           try { recognition.abort(); } catch (_) {}
         }
         if ("speechSynthesis" in window) {
-          window.speechSynthesis.cancel();
+          try { window.speechSynthesis.cancel(); } catch (_) {}
         }
       }
     });
 
     window.addEventListener("pagehide", () => {
       if ("speechSynthesis" in window) {
-        window.speechSynthesis.cancel();
+        try { window.speechSynthesis.cancel(); } catch (_) {}
       }
     });
 

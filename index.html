@@ -1,838 +1,664 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>ピーちゃん</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <title>ピーちゃん</title>
+  <style>
+    :root{
+      --bg:#f7f8fb;
+      --card:#ffffff;
+      --text:#222;
+      --sub:#666;
+      --line:#dcdfe6;
 
-<style>
-body{
-  margin:0;
-  font-family:sans-serif;
-  text-align:center;
-  background:#eef7ff;
-  overflow-x:hidden;
-}
-h2{
-  margin:16px 0 8px;
-}
-.stage{
-  height:340px;
-  position:relative;
-  overflow:hidden;
-  background:linear-gradient(to bottom,#eef7ff 0%, #f7fbff 60%, #e3f1ff 100%);
-  border-top:1px solid #d6e8f7;
-  border-bottom:1px solid #d6e8f7;
-}
-.bird{
-  width:160px;
-  position:absolute;
-  left:50%;
-  top:62%;
-  transform:translate(-50%,-50%) rotate(0deg);
-  transition:
-    left 1.2s ease,
-    top 1.2s ease,
-    transform 0.7s ease,
-    filter 0.4s ease;
-  user-select:none;
-  -webkit-user-drag:none;
-}
-.controls{
-  margin:16px 0 10px;
-}
-button{
-  padding:15px 25px;
-  font-size:18px;
-  border:none;
-  border-radius:14px;
-  background:#4da3ff;
-  color:#fff;
-  cursor:pointer;
-  box-shadow:0 4px 10px rgba(0,0,0,.12);
-}
-button:active{
-  transform:scale(0.98);
-}
-.info{
-  font-size:14px;
-  color:#555;
-  min-height:24px;
-  margin:8px 12px 20px;
-}
-.sleepMode{
-  opacity:0.92;
-  filter:brightness(0.95);
-}
-.listenGlow{
-  filter:drop-shadow(0 0 10px rgba(77,163,255,.75));
-}
-@keyframes tinyBob {
-  0%   { margin-top:0px; }
-  50%  { margin-top:-4px; }
-  100% { margin-top:0px; }
-}
-.bob{
-  animation: tinyBob 0.9s ease-in-out infinite;
-}
-</style>
+      --btn-off:#9aa0aa;
+      --btn-off-text:#fff;
+
+      --btn-listening:#e25b5b;
+      --btn-listening-text:#fff;
+
+      --btn-action:#4d7cff;
+      --btn-action-text:#fff;
+
+      --btn-soft:#eef3ff;
+      --danger:#d9534f;
+
+      --shadow:0 8px 24px rgba(0,0,0,0.08);
+      --radius:20px;
+    }
+
+    *{ box-sizing:border-box; }
+
+    body{
+      margin:0;
+      font-family:"Hiragino Kaku Gothic ProN","Yu Gothic","Meiryo",sans-serif;
+      background:var(--bg);
+      color:var(--text);
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    .wrap{
+      max-width:720px;
+      margin:0 auto;
+      padding:16px 14px 40px;
+    }
+
+    .card{
+      background:var(--card);
+      border-radius:var(--radius);
+      box-shadow:var(--shadow);
+      padding:18px;
+    }
+
+    .top{
+      display:flex;
+      align-items:center;
+      gap:14px;
+      margin-bottom:14px;
+    }
+
+    .bird{
+      width:110px;
+      height:110px;
+      border-radius:50%;
+      background:#fff8dc;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      font-size:58px;
+      flex-shrink:0;
+      border:3px solid #f0df8a;
+      transition:transform .2s ease;
+    }
+
+    .bird.listen{
+      transform:scale(1.05);
+    }
+
+    .titleBox{
+      flex:1;
+      min-width:0;
+    }
+
+    .title{
+      font-size:28px;
+      font-weight:700;
+      margin:0 0 4px 0;
+    }
+
+    .subtitle{
+      font-size:14px;
+      color:var(--sub);
+      line-height:1.6;
+      margin:0;
+    }
+
+    .status{
+      margin:14px 0 8px;
+      padding:12px 14px;
+      border-radius:14px;
+      background:#f3f5f8;
+      font-size:15px;
+      line-height:1.6;
+    }
+
+    .status strong{
+      font-size:16px;
+    }
+
+    .talkBtn{
+      width:100%;
+      min-height:74px;
+      border:none;
+      border-radius:18px;
+      font-size:24px;
+      font-weight:700;
+      cursor:pointer;
+      transition:transform .08s ease, opacity .2s ease, background .2s ease;
+      margin-top:12px;
+      touch-action:manipulation;
+    }
+
+    .talkBtn:active{
+      transform:scale(0.985);
+    }
+
+    .talkBtn.off{
+      background:var(--btn-off);
+      color:var(--btn-off-text);
+    }
+
+    .talkBtn.on{
+      background:var(--btn-listening);
+      color:var(--btn-listening-text);
+      box-shadow:0 0 0 6px rgba(226,91,91,0.14);
+    }
+
+    .row{
+      display:flex;
+      gap:10px;
+      margin-top:12px;
+      flex-wrap:wrap;
+    }
+
+    .miniBtn{
+      flex:1 1 160px;
+      min-height:48px;
+      border:none;
+      border-radius:14px;
+      background:var(--btn-action);
+      color:var(--btn-action-text);
+      font-size:16px;
+      font-weight:700;
+      cursor:pointer;
+      padding:10px 14px;
+    }
+
+    .miniBtn.soft{
+      background:var(--btn-soft);
+      color:#24408f;
+    }
+
+    .miniBtn.warn{
+      background:#fff1f0;
+      color:var(--danger);
+    }
+
+    .section{
+      margin-top:16px;
+    }
+
+    .section h2{
+      font-size:18px;
+      margin:0 0 10px;
+    }
+
+    .box{
+      border:1px solid var(--line);
+      border-radius:14px;
+      background:#fff;
+      padding:12px;
+      line-height:1.7;
+      min-height:74px;
+      font-size:15px;
+      white-space:pre-wrap;
+      word-break:break-word;
+    }
+
+    .small{
+      font-size:13px;
+      color:var(--sub);
+      line-height:1.7;
+    }
+
+    .memoryList{
+      margin-top:8px;
+      max-height:220px;
+      overflow:auto;
+      border:1px solid var(--line);
+      border-radius:14px;
+      background:#fff;
+      padding:10px 12px;
+      font-size:14px;
+      line-height:1.8;
+    }
+
+    .memoryList div{
+      border-bottom:1px dashed #e8ebf0;
+      padding:4px 0;
+    }
+
+    .memoryList div:last-child{
+      border-bottom:none;
+    }
+
+    .footerNote{
+      margin-top:16px;
+      font-size:13px;
+      color:#666;
+      line-height:1.8;
+      background:#fafbfe;
+      border:1px solid #e6eaf2;
+      border-radius:14px;
+      padding:12px;
+    }
+
+    @media (max-width:480px){
+      .bird{
+        width:92px;
+        height:92px;
+        font-size:48px;
+      }
+      .title{
+        font-size:24px;
+      }
+      .talkBtn{
+        min-height:78px;
+        font-size:23px;
+      }
+    }
+  </style>
 </head>
 <body>
+  <div class="wrap">
+    <div class="card">
+      <div class="top">
+        <div id="birdFace" class="bird">🐥</div>
+        <div class="titleBox">
+          <h1 class="title">ピーちゃん</h1>
+          <p class="subtitle">
+            話しかけると、覚えて、少しずつ反応するピーちゃんです。<br>
+            iPhoneでは最初のタップで音を有効化します。
+          </p>
+        </div>
+      </div>
 
-<h2>ピーちゃん</h2>
+      <div id="statusBox" class="status">
+        <strong id="statusMain">待機中です</strong><br>
+        <span id="statusSub">ボタンを押すと聞き始めます。</span>
+      </div>
 
-<div class="stage">
-  <img id="bird" class="bird" src="sleep.jpg" alt="ピーちゃん">
-</div>
+      <button id="talkBtn" class="talkBtn off">🎤 話しかける</button>
 
-<div class="controls">
-  <button id="btn">🎤 話しかける</button>
-</div>
+      <div class="row">
+        <button id="peepBtn" class="miniBtn soft">♪ ピーと鳴く</button>
+        <button id="reloadBtn" class="miniBtn soft">↻ 記憶を読み直す</button>
+        <button id="resetMemoryBtn" class="miniBtn warn">記憶リセット</button>
+      </div>
 
-<div class="info" id="info">話しかけると覚えていきます</div>
+      <div class="section">
+        <h2>いま聞こえた言葉</h2>
+        <div id="heardBox" class="box">まだありません</div>
+      </div>
 
-<script>
-const WORKER_URL = "https://pichan-config.gudafutanu.workers.dev";
+      <div class="section">
+        <h2>ピーちゃんの返事</h2>
+        <div id="replyBox" class="box">ここに返事が出ます</div>
+      </div>
 
-const bird = document.getElementById("bird");
-const btn = document.getElementById("btn");
-const info = document.getElementById("info");
+      <div class="section">
+        <h2>覚えている言葉</h2>
+        <div id="memoryList" class="memoryList">読み込み中...</div>
+      </div>
 
-const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+      <div class="footerNote">
+        <strong>音が出ないときの確認</strong><br>
+        1. `p_chan.mp3` が `index.html` と同じ場所にあるか確認してください。<br>
+        2. iPhone は最初のタップ前だと音が鳴らないことがあります。最初に「話しかける」か「ピーと鳴く」を押してください。<br>
+        3. 消音モードや音量0になっていないか確認してください。<br>
+        4. `wav` より `mp3` または `m4a` のほうが iPhone で安定しやすいです。<br>
+        5. それでも無音なら `p_chan.m4a` に差し替えて、下の `AUDIO_URLS` を変更してください。
+      </div>
+    </div>
+  </div>
 
-// ===== Cloudflare保存データ =====
-let fullMemory = {};
-let partMemory = {};
-let bannedWords = [];
+  <script>
+    /*
+      ------------------------------------------------------------
+      必ず確認する場所
+      Worker本体の編集先は:
+      pichan-config/worker.js
+      ------------------------------------------------------------
+    */
 
-let isListening = false;
-let recognition = null;
-let listenStopTimer = null;
+    const WORKER_BASE = "https://pichan-config.gudafutanu.workers.dev";
 
-let lastSpokenText = "";
-let lastSpokenAt = 0;
-let lastChirpAt = 0;
-let lastLearnedText = "";
-let lastLearnedAt = 0;
+    // iPhone向け。まず mp3 を優先。必要なら m4a に変更可。
+    const AUDIO_URLS = [
+      "./p_chan.mp3",
+      "./p_chan.m4a"
+    ];
 
-const FULL_THRESHOLD = 10;
-const PART_THRESHOLD = 2;
-const NIGHT_START = 22;
-const NIGHT_END = 7;
+    const talkBtn = document.getElementById("talkBtn");
+    const peepBtn = document.getElementById("peepBtn");
+    const reloadBtn = document.getElementById("reloadBtn");
+    const resetMemoryBtn = document.getElementById("resetMemoryBtn");
 
-// ===== Worker通信 =====
-async function workerGetMemory(){
-  try{
-    const res = await fetch(`${WORKER_URL}/memory/get`);
-    const data = await res.json();
-    if(data.ok && data.memory){
-      return data.memory;
+    const statusMain = document.getElementById("statusMain");
+    const statusSub = document.getElementById("statusSub");
+    const heardBox = document.getElementById("heardBox");
+    const replyBox = document.getElementById("replyBox");
+    const memoryList = document.getElementById("memoryList");
+    const birdFace = document.getElementById("birdFace");
+
+    let recognition = null;
+    let isListening = false;
+    let audioUnlocked = false;
+    let currentMemory = {};
+    let blockedWords = [];
+
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+
+    function setStatus(main, sub = "") {
+      statusMain.textContent = main;
+      statusSub.textContent = sub;
     }
-  }catch(e){
-    console.error("memory/get failed", e);
-  }
-  return { words:{} };
-}
 
-async function workerLearn(text){
-  try{
-    const res = await fetch(`${WORKER_URL}/memory/learn`, {
-      method:"POST",
-      headers:{ "Content-Type":"application/json" },
-      body: JSON.stringify({ text })
-    });
-    return await res.json();
-  }catch(e){
-    console.error("memory/learn failed", e);
-    return { ok:false, learned:false };
-  }
-}
-
-async function workerReset(){
-  try{
-    const res = await fetch(`${WORKER_URL}/memory/reset`, {
-      method:"POST"
-    });
-    return await res.json();
-  }catch(e){
-    console.error("memory/reset failed", e);
-    return { ok:false };
-  }
-}
-
-async function workerGetBlockedWords(){
-  try{
-    const res = await fetch(`${WORKER_URL}/blocked/get`);
-    const data = await res.json();
-    if(data.ok && Array.isArray(data.blockedWords)){
-      return data.blockedWords;
-    }
-  }catch(e){
-    console.error("blocked/get failed", e);
-  }
-  return [];
-}
-
-// ===== 基本 =====
-function nowHour(){
-  return new Date().getHours();
-}
-
-function isNight(){
-  const h = nowHour();
-  return h >= NIGHT_START || h < NIGHT_END;
-}
-
-function normalizeText(text){
-  return (text || "")
-    .replace(/\s+/g, " ")
-    .replace(/[。！？!?.]+$/g, "")
-    .trim();
-}
-
-function addCount(target, key, value){
-  if(!key) return;
-
-  if(!target[key]){
-    target[key] = {
-      count: 0,
-      last: Date.now(),
-      born: Date.now()
-    };
-  }
-
-  target[key].count += value;
-  target[key].last = Date.now();
-  if(!target[key].born) target[key].born = Date.now();
-}
-
-function getCount(obj){
-  if(!obj) return 0;
-  if(typeof obj === "number") return obj;
-  return Number(obj.count || 0);
-}
-
-function getLast(obj){
-  if(!obj) return 0;
-  if(typeof obj === "number") return 0;
-  return Number(obj.last || obj.lastHeardAt || 0);
-}
-
-function getBorn(obj){
-  if(!obj) return 0;
-  if(typeof obj === "number") return 0;
-  return Number(obj.born || 0);
-}
-
-function isBannedText(text){
-  const t = normalizeText(text);
-  if(!t) return true;
-
-  return bannedWords.some(word => {
-    const w = normalizeText(word);
-    return w && t.includes(w);
-  });
-}
-
-// ===== Cloudflare記憶読み込み =====
-async function loadCloudMemory(){
-  const remote = await workerGetMemory();
-  const words = remote.words || {};
-
-  fullMemory = {};
-  partMemory = {};
-
-  for(const [text, meta] of Object.entries(words)){
-    fullMemory[text] = {
-      count: Number(meta.count || 0),
-      last: Number(meta.lastHeardAt || meta.last || 0),
-      born: Number(meta.born || meta.lastHeardAt || Date.now())
-    };
-
-    const parts = extractParts(text);
-    parts.forEach(p => {
-      if(isBannedText(p)) return;
-      if(p === text){
-        addCount(partMemory, p, 0.35 * Math.max(1, Number(meta.count || 0)));
-      }else{
-        addCount(partMemory, p, 0.28 * Math.max(1, Number(meta.count || 0)));
-      }
-
-      partMemory[p].last = Number(meta.lastHeardAt || meta.last || Date.now());
-      partMemory[p].born = Number(meta.born || meta.lastHeardAt || Date.now());
-    });
-  }
-}
-
-// ===== 音 =====
-function chirp(cb){
-  const a = new Audio("p_chan.wav");
-  a.volume = 1;
-  a.play().catch(()=>{});
-  a.onended = ()=>{ if(cb) cb(); };
-}
-
-function doubleChirpMaybe(cb){
-  chirp(()=>{
-    if(Math.random() < 0.45){
-      setTimeout(()=>chirp(cb),130);
-    }else{
-      if(cb) cb();
-    }
-  });
-}
-
-function speakText(text, onend){
-  if(!text) return;
-  speechSynthesis.cancel();
-  const u = new SpeechSynthesisUtterance(text);
-  u.lang = "ja-JP";
-  u.rate = 0.95;
-  u.pitch = 1.4;
-  u.volume = 1;
-  u.onend = ()=>{ if(onend) onend(); };
-  speechSynthesis.speak(u);
-}
-
-// ===== 見た目 =====
-function setBirdImage(mode){
-  if(isNight()){
-    bird.src = "sleep.jpg";
-    bird.classList.add("sleepMode");
-    bird.classList.remove("listenGlow");
-    return;
-  }
-
-  bird.classList.remove("sleepMode");
-
-  if(mode === "listen"){
-    bird.src = "listen.jpg";
-    bird.classList.add("listenGlow");
-  }else if(mode === "happy"){
-    bird.src = "happy.jpg";
-    bird.classList.remove("listenGlow");
-  }else{
-    bird.src = Math.random() < 0.55 ? "happy.jpg" : "listen.jpg";
-    bird.classList.remove("listenGlow");
-  }
-}
-
-function moveBirdNaturally(stronger = false){
-  if(isNight()){
-    bird.style.left = "50%";
-    bird.style.top = "62%";
-    bird.style.transform = "translate(-50%,-50%) rotate(0deg)";
-    bird.classList.remove("bob");
-    setBirdImage("sleep");
-    return;
-  }
-
-  const left = 42 + Math.random() * 16;
-  const top = 56 + Math.random() * 14;
-  const rot = (Math.random() * 18 - 9).toFixed(1);
-
-  bird.style.left = left + "%";
-  bird.style.top = top + "%";
-  bird.style.transform = `translate(-50%,-50%) rotate(${rot}deg)`;
-
-  if(stronger || Math.random() < 0.45){
-    bird.classList.add("bob");
-  }else{
-    bird.classList.remove("bob");
-  }
-}
-
-// ===== 時間帯補正 =====
-function getTimeBoost(text){
-  const h = nowHour();
-
-  if(h >= 5 && h < 10){
-    if(text.includes("おはよう")) return 1.8;
-  }
-
-  if(h >= 19 || h < 2){
-    if(text.includes("おやすみ") || text.includes("ねんね")) return 1.8;
-  }
-
-  return 1;
-}
-
-// ===== 部分学習 =====
-function extractParts(text){
-  const t = normalizeText(text);
-  if(!t || isBannedText(t)) return [];
-
-  const parts = new Set();
-
-  if(t.length >= 2 && t.length <= 12){
-    parts.add(t);
-  }
-
-  t.split(/[、。,.!！?？\s]+/)
-    .map(x => x.trim())
-    .filter(x => x.length >= 2)
-    .forEach(x => {
-      if(!isBannedText(x)) parts.add(x);
-    });
-
-  const softTokens = ["ピーちゃん","かわいい","おはよう","おやすみ","こんにちは","すごい","えらい"];
-  for(const token of softTokens){
-    if(t.includes(token) && !isBannedText(token)) parts.add(token);
-  }
-
-  if(t.length >= 4){
-    for(let len = 2; len <= 8; len++){
-      for(let i = 0; i <= t.length - len; i++){
-        const s = t.slice(i, i + len).trim();
-        if(s.length < 2) continue;
-        if(/[ 　]/.test(s)) continue;
-        if(/^[、。,.!！?？]+$/.test(s)) continue;
-        if(s === t) continue;
-        if(isBannedText(s)) continue;
-        if(len >= 5 && Math.random() < 0.55) continue;
-        parts.add(s);
+    function setListeningUI(listening) {
+      isListening = listening;
+      if (listening) {
+        talkBtn.classList.remove("off");
+        talkBtn.classList.add("on");
+        talkBtn.textContent = "🛑 聞いています";
+        birdFace.classList.add("listen");
+      } else {
+        talkBtn.classList.remove("on");
+        talkBtn.classList.add("off");
+        talkBtn.textContent = "🎤 話しかける";
+        birdFace.classList.remove("listen");
       }
     }
-  }
 
-  return [...parts].filter(p => {
-    if(p.length < 2) return false;
-    if(p.length > 12) return false;
-    if(/^[ゃゅょァィゥェォッーん]+$/.test(p)) return false;
-    return !isBannedText(p);
-  });
-}
-
-// ===== 学習 =====
-async function learn(text){
-  const t = normalizeText(text);
-  if(!t) return;
-  if(isBannedText(t)) return;
-
-  const result = await workerLearn(t);
-
-  if(result.ok && result.learned){
-    await loadCloudMemory();
-    lastLearnedText = t;
-    lastLearnedAt = Date.now();
-  }
-}
-
-// ===== 候補取得 =====
-function getEligibleFullEntries(){
-  return Object.entries(fullMemory)
-    .map(([k,v]) => ({ text:k, count:getCount(v), last:getLast(v), born:getBorn(v) }))
-    .filter(x => x.text && x.count >= FULL_THRESHOLD && !isBannedText(x.text));
-}
-
-function getEligiblePartEntries(){
-  return Object.entries(partMemory)
-    .map(([k,v]) => ({ text:k, count:getCount(v), last:getLast(v), born:getBorn(v) }))
-    .filter(x => x.text && x.count >= PART_THRESHOLD && !isBannedText(x.text));
-}
-
-function computeNaturalWeight(item, type){
-  const now = Date.now();
-  const ageMs = now - (item.last || item.born || now);
-  const hours = ageMs / (1000 * 60 * 60);
-
-  let freshness;
-  if(hours < 1) freshness = 2.2;
-  else if(hours < 12) freshness = 1.8;
-  else if(hours < 48) freshness = 1.3;
-  else freshness = 0.95;
-
-  let agingStyle;
-  if(type === "full"){
-    agingStyle = hours < 12 ? 1.7 : hours < 72 ? 1.2 : 0.95;
-  }else{
-    agingStyle = hours < 12 ? 1.1 : hours < 72 ? 1.35 : 1.7;
-  }
-
-  let base = item.count * freshness * agingStyle * getTimeBoost(item.text);
-
-  if(lastLearnedText && item.text && lastLearnedText.includes(item.text)){
-    base *= 1.5;
-  }
-
-  if(item.text === lastSpokenText){
-    base *= 0.35;
-  }
-
-  return Math.max(0.01, base);
-}
-
-function weightedPickFromItems(items, type, maxTake = 8){
-  if(!items.length) return "";
-
-  const sorted = [...items]
-    .sort((a,b)=>computeNaturalWeight(b, type)-computeNaturalWeight(a, type))
-    .slice(0, maxTake)
-    .map(x => ({
-      text: x.text,
-      weight: computeNaturalWeight(x, type)
-    }));
-
-  const total = sorted.reduce((s, x) => s + x.weight, 0);
-  let r = Math.random() * total;
-
-  for(const item of sorted){
-    r -= item.weight;
-    if(r <= 0) return item.text;
-  }
-  return sorted[0].text;
-}
-
-function pickNameLike(parts){
-  const names = parts.filter(x => x.text === "ピーちゃん" || x.text.includes("ピーちゃん"));
-  if(!names.length) return "";
-  return weightedPickFromItems(names, "part", 5);
-}
-
-function pickCuteLike(parts){
-  const cute = parts.filter(x =>
-    x.text.includes("かわいい") ||
-    x.text.includes("おはよう") ||
-    x.text.includes("おやすみ") ||
-    x.text.includes("こんにちは")
-  );
-  if(!cute.length) return "";
-  return weightedPickFromItems(cute, "part", 5);
-}
-
-function buildRecombinedPhrase(){
-  const fulls = getEligibleFullEntries();
-  const parts = getEligiblePartEntries();
-  if(!parts.length && !fulls.length) return "";
-
-  const name = pickNameLike(parts);
-  const cute = pickCuteLike(parts);
-  const anyPart = weightedPickFromItems(parts, "part", 8);
-  const anyFull = weightedPickFromItems(fulls, "full", 6);
-
-  const patterns = [];
-
-  if(name && cute){
-    patterns.push(`${name}${cute}`);
-    patterns.push(`${name} ${cute}`);
-    patterns.push(`${cute}${name}`);
-    patterns.push(`${name}…${cute}`);
-  }
-
-  if(name && anyPart && anyPart !== name){
-    patterns.push(`${name}${anyPart}`);
-    patterns.push(`${name} ${anyPart}`);
-    patterns.push(`${name}、${anyPart}`);
-  }
-
-  if(cute && anyPart && anyPart !== cute){
-    patterns.push(`${anyPart}${cute}`);
-    patterns.push(`${cute}`);
-  }
-
-  if(name){
-    patterns.push(name);
-    patterns.push(`${name}、${name}`);
-  }
-
-  if(cute){
-    patterns.push(cute);
-  }
-
-  if(anyPart){
-    patterns.push(anyPart);
-  }
-
-  if(anyFull){
-    patterns.push(anyFull);
-  }
-
-  const cleaned = [...new Set(
-    patterns
-      .map(x => normalizeText(x.replace(/\s+/g, " ").trim()))
-      .filter(x => x && x.length <= 18 && !isBannedText(x))
-  )];
-
-  if(!cleaned.length) return "";
-  return cleaned[Math.floor(Math.random() * cleaned.length)];
-}
-
-function chooseNaturalSpeech(){
-  const fulls = getEligibleFullEntries();
-  const parts = getEligiblePartEntries();
-
-  if(!fulls.length && !parts.length) return "";
-
-  const now = Date.now();
-  const justLearned = (now - lastLearnedAt) < 1000 * 60 * 20;
-
-  let result = "";
-  const r = Math.random();
-
-  if(justLearned){
-    if(r < 0.68 && fulls.length){
-      result = weightedPickFromItems(fulls, "full", 6);
-    }else if(r < 0.90 && parts.length){
-      const shortParts = parts.filter(x => x.text.length <= 8);
-      result = weightedPickFromItems(shortParts.length ? shortParts : parts, "part", 8);
-    }else{
-      result = buildRecombinedPhrase();
-    }
-  }else{
-    if(r < 0.38 && fulls.length){
-      result = weightedPickFromItems(fulls, "full", 6);
-    }else if(r < 0.72 && parts.length){
-      const shortParts = parts.filter(x => x.text.length <= 8);
-      result = weightedPickFromItems(shortParts.length ? shortParts : parts, "part", 8);
-    }else{
-      result = buildRecombinedPhrase();
-    }
-  }
-
-  result = normalizeText(result);
-  if(isBannedText(result)) return "";
-  return result;
-}
-
-// ===== 返事 =====
-function replyAfterListening(recognizedText){
-  setBirdImage("happy");
-  moveBirdNaturally(true);
-
-  doubleChirpMaybe(()=>{
-    const remembered = chooseNaturalSpeech();
-
-    if(!remembered){
-      setTimeout(()=>{
-        if(!isNight()) setBirdImage("idle");
-      },700);
-      return;
+    async function fetchJSON(url, options = {}) {
+      const res = await fetch(url, options);
+      if (!res.ok) {
+        const txt = await res.text().catch(() => "");
+        throw new Error(`HTTP ${res.status} ${txt}`);
+      }
+      return await res.json();
     }
 
-    if(Math.random() < 0.82){
-      lastSpokenText = remembered;
-      lastSpokenAt = Date.now();
-      info.textContent = `ピーちゃん「${remembered}」`;
-      speakText(remembered, ()=>{
-        if(!isNight()) setBirdImage("idle");
+    async function loadBlockedWords() {
+      try {
+        const data = await fetchJSON(`${WORKER_BASE}/blocked/get`);
+        blockedWords = Array.isArray(data.words) ? data.words : [];
+      } catch (e) {
+        console.warn("禁止語の取得に失敗:", e);
+        blockedWords = [];
+      }
+    }
+
+    async function loadMemory() {
+      try {
+        setStatus("記憶を読んでいます", "Cloudflare Worker から記憶を取得中です。");
+        const data = await fetchJSON(`${WORKER_BASE}/memory/get`);
+        currentMemory = data.memory || {};
+        renderMemory(currentMemory);
+        setStatus("待機中です", "ボタンを押すと聞き始めます。");
+      } catch (e) {
+        console.error(e);
+        setStatus("記憶の取得に失敗しました", "Worker URL や CORS 設定を確認してください。");
+        memoryList.innerHTML = "記憶の読み込みに失敗しました。";
+      }
+    }
+
+    function renderMemory(memoryObj) {
+      const entries = Object.entries(memoryObj || {})
+        .sort((a, b) => (b[1] || 0) - (a[1] || 0));
+
+      if (!entries.length) {
+        memoryList.innerHTML = "まだ覚えている言葉はありません。";
+        return;
+      }
+
+      memoryList.innerHTML = entries
+        .map(([word, count]) => `<div>${escapeHtml(word)}（${count}回）</div>`)
+        .join("");
+    }
+
+    function escapeHtml(str) {
+      return String(str)
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;");
+    }
+
+    function normalizeText(text) {
+      return String(text || "").trim().replace(/\s+/g, " ");
+    }
+
+    function containsBlockedWord(text) {
+      const t = normalizeText(text).toLowerCase();
+      return blockedWords.some(word => {
+        const w = normalizeText(word).toLowerCase();
+        return w && t.includes(w);
       });
-    }else{
-      if(!isNight()) setBirdImage("idle");
     }
-  });
-}
 
-// ===== 音声認識 =====
-function stopRecognitionNow(){
-  try{
-    if(recognition) recognition.stop();
-  }catch(e){}
-}
+    async function learnText(text) {
+      const normalized = normalizeText(text);
+      if (!normalized) return null;
 
-function resetListenStopTimer(){
-  clearTimeout(listenStopTimer);
-  listenStopTimer = setTimeout(()=>{
-    stopRecognitionNow();
-  },5000);
-}
+      const data = await fetchJSON(`${WORKER_BASE}/memory/learn`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ text: normalized })
+      });
 
-function startRec(){
-  if(isNight()){
-    info.textContent = "ピーちゃんは寝ています";
-    setBirdImage("sleep");
-    return;
-  }
+      return data;
+    }
 
-  if(!SpeechRecognition){
-    alert("このブラウザは音声認識に対応していません");
-    return;
-  }
-
-  if(isListening) return;
-
-  recognition = new SpeechRecognition();
-  recognition.lang = "ja-JP";
-  recognition.continuous = true;
-  recognition.interimResults = true;
-
-  let finalText = "";
-
-  recognition.onstart = ()=>{
-    isListening = true;
-    speechSynthesis.cancel();
-    setBirdImage("listen");
-    moveBirdNaturally(true);
-    info.textContent = "聞いています…";
-    resetListenStopTimer();
-  };
-
-  recognition.onresult = (e)=>{
-    resetListenStopTimer();
-
-    let interim = "";
-
-    for(let i = e.resultIndex; i < e.results.length; i++){
-      const part = e.results[i][0].transcript;
-      if(e.results[i].isFinal){
-        finalText += part;
-      }else{
-        interim += part;
+    async function resetMemory() {
+      if (!confirm("本当に記憶をリセットしますか？")) return;
+      try {
+        const data = await fetchJSON(`${WORKER_BASE}/memory/reset`, {
+          method: "POST"
+        });
+        console.log(data);
+        currentMemory = {};
+        renderMemory(currentMemory);
+        replyBox.textContent = "記憶をリセットしました。";
+        setStatus("待機中です", "記憶は空になりました。");
+      } catch (e) {
+        console.error(e);
+        alert("記憶リセットに失敗しました。");
       }
     }
 
-    const displayText = normalizeText(finalText || interim);
-    if(displayText){
-      info.textContent = `聞き取り中：${displayText}`;
-    }
-  };
+    function chooseReply(text) {
+      const t = normalizeText(text);
 
-  recognition.onerror = ()=>{
-    info.textContent = "うまく聞き取れませんでした";
-  };
+      if (!t) return "ピー？";
+      if (containsBlockedWord(t)) return "その言葉は覚えないよ。ピー。";
 
-  recognition.onend = async ()=>{
-    clearTimeout(listenStopTimer);
-    isListening = false;
+      const memoryEntries = Object.entries(currentMemory || {});
+      const exact = memoryEntries.find(([k]) => normalizeText(k) === t);
+      if (exact) {
+        const count = exact[1] || 0;
+        if (count >= 10) return `それ知ってるよ。${t}。ピー！`;
+        if (count >= 5) return `なんだか聞いたことあるよ。${t}。`;
+      }
 
-    const text = normalizeText(finalText);
+      if (t.includes("おはよう")) return "おはよう。ピー！";
+      if (t.includes("かわいい")) return "ピーちゃん、かわいい？ ピー！";
+      if (t.includes("ピーちゃん")) return "ピー！ はーい。";
+      if (t.includes("こんにちは")) return "こんにちは。ピー。";
+      if (t.includes("おやすみ")) return "おやすみ。ピー。";
+      if (t.includes("好き")) return "うれしいよ。ピー！";
 
-    if(isNight()){
-      setBirdImage("sleep");
-    }else{
-      setBirdImage("idle");
-    }
-
-    if(!text){
-      info.textContent = "聞こえなかったみたいです";
-      return;
+      return "ピー！";
     }
 
-    await learn(text);
-    replyAfterListening(text);
-  };
+    async function unlockAudio() {
+      if (audioUnlocked) return true;
 
-  recognition.start();
-}
+      for (const src of AUDIO_URLS) {
+        try {
+          const a = new Audio(src);
+          a.preload = "auto";
+          a.volume = 0.01;
+          a.muted = false;
 
-// ===== 自動行動 =====
-function maybeAutoMove(){
-  if(isListening) return;
-  moveBirdNaturally(Math.random() < 0.35);
-  if(!isNight() && Math.random() < 0.55){
-    setBirdImage("idle");
-  }
-}
+          const playPromise = a.play();
+          if (playPromise && typeof playPromise.then === "function") {
+            await playPromise;
+          }
 
-function maybeAutoChirp(){
-  if(isListening || isNight()) return;
-  if(Date.now() - lastChirpAt < 1700) return;
+          a.pause();
+          a.currentTime = 0;
+          audioUnlocked = true;
+          console.log("audio unlock success:", src);
+          return true;
+        } catch (e) {
+          console.warn("audio unlock failed:", src, e);
+        }
+      }
 
-  if(Math.random() < 0.64){
-    lastChirpAt = Date.now();
-    setBirdImage("happy");
-    moveBirdNaturally(true);
+      console.warn("audio unlock failed all sources");
+      return false;
+    }
 
-    doubleChirpMaybe(()=>{
-      setTimeout(()=>{
-        if(!isNight()) setBirdImage("idle");
-      },400);
+    async function playPeep() {
+      for (const src of AUDIO_URLS) {
+        try {
+          const a = new Audio(src);
+          a.preload = "auto";
+          a.volume = 1.0;
+          await a.play();
+          return true;
+        } catch (e) {
+          console.warn("play failed:", src, e);
+        }
+      }
+      return false;
+    }
+
+    function setupRecognition() {
+      if (!SpeechRecognition) {
+        setStatus("音声認識に非対応です", "このブラウザでは音声入力が使えません。");
+        talkBtn.disabled = true;
+        talkBtn.textContent = "音声入力非対応";
+        return;
+      }
+
+      recognition = new SpeechRecognition();
+      recognition.lang = "ja-JP";
+      recognition.interimResults = false;
+      recognition.continuous = false;
+      recognition.maxAlternatives = 1;
+
+      recognition.onstart = () => {
+        setListeningUI(true);
+        setStatus("聞いています", "話しかけてください。");
+      };
+
+      recognition.onend = () => {
+        setListeningUI(false);
+        if (statusMain.textContent === "聞いています") {
+          setStatus("待機中です", "ボタンを押すと聞き始めます。");
+        }
+      };
+
+      recognition.onerror = (event) => {
+        console.warn("recognition error:", event.error);
+        setListeningUI(false);
+
+        if (event.error === "not-allowed") {
+          setStatus("マイクが使えません", "ブラウザでマイクの許可を確認してください。");
+        } else if (event.error === "no-speech") {
+          setStatus("声が聞き取れませんでした", "もう一度押して話してください。");
+        } else {
+          setStatus("音声入力エラー", `原因: ${event.error}`);
+        }
+      };
+
+      recognition.onresult = async (event) => {
+        const text = normalizeText(event.results?.[0]?.[0]?.transcript || "");
+        heardBox.textContent = text || "聞き取れませんでした";
+        console.log("heard:", text);
+
+        if (!text) {
+          replyBox.textContent = "ピー？";
+          return;
+        }
+
+        if (containsBlockedWord(text)) {
+          replyBox.textContent = "その言葉は覚えないよ。ピー。";
+          setStatus("禁止語が含まれています", "保存はしませんでした。");
+          await playPeep().catch(() => {});
+          return;
+        }
+
+        try {
+          const res = await learnText(text);
+          if (res && res.memory) {
+            currentMemory = res.memory;
+            renderMemory(currentMemory);
+          } else {
+            await loadMemory();
+          }
+
+          const reply = chooseReply(text);
+          replyBox.textContent = reply;
+          setStatus("覚えました", "Cloudflare KV に保存しました。");
+          await playPeep().catch(() => {});
+        } catch (e) {
+          console.error(e);
+          replyBox.textContent = "覚えようとしたけど失敗したよ。";
+          setStatus("保存に失敗しました", "Worker の /memory/learn を確認してください。");
+        }
+      };
+    }
+
+    async function startListening() {
+      if (!recognition) return;
+
+      try {
+        await unlockAudio();
+      } catch (e) {
+        console.warn("unlock audio error:", e);
+      }
+
+      try {
+        recognition.start();
+      } catch (e) {
+        console.warn("recognition.start error:", e);
+      }
+    }
+
+    function stopListening() {
+      if (!recognition) return;
+      try {
+        recognition.stop();
+      } catch (e) {
+        console.warn("recognition.stop error:", e);
+      }
+    }
+
+    talkBtn.addEventListener("click", async () => {
+      await unlockAudio();
+
+      if (isListening) {
+        stopListening();
+      } else {
+        startListening();
+      }
     });
-  }
-}
 
-function maybeTalkToSelf(){
-  if(isListening || isNight()) return;
-  if(Date.now() - lastSpokenAt < 3200) return;
+    peepBtn.addEventListener("click", async () => {
+      await unlockAudio();
+      const ok = await playPeep();
+      if (ok) {
+        setStatus("ピーと鳴きました", "iPhoneで鳴れば音設定はかなり良好です。");
+      } else {
+        setStatus("音が出ませんでした", "mp3/m4a の場所や iPhone の消音設定を確認してください。");
+      }
+    });
 
-  const speech = chooseNaturalSpeech();
-  if(!speech) return;
+    reloadBtn.addEventListener("click", async () => {
+      await loadBlockedWords();
+      await loadMemory();
+      replyBox.textContent = "記憶を読み直しました。";
+    });
 
-  if(Math.random() < 0.30){
-    lastSpokenText = speech;
-    lastSpokenAt = Date.now();
+    resetMemoryBtn.addEventListener("click", async () => {
+      await resetMemory();
+    });
 
-    setBirdImage("happy");
-    moveBirdNaturally(true);
-    info.textContent = `ピーちゃん「${speech}」`;
+    document.addEventListener("visibilitychange", () => {
+      if (document.hidden && isListening) {
+        stopListening();
+      }
+    });
 
-    if(Math.random() < 0.42){
-      chirp(()=>{
-        setTimeout(()=>speakText(speech),170);
-      });
-    }else{
-      speakText(speech);
-    }
-  }
-}
-
-function maybeNameCall(){
-  if(isListening || isNight()) return;
-  if(Date.now() - lastSpokenAt < 3000) return;
-
-  const hasName =
-    getCount(fullMemory["ピーちゃん"]) >= FULL_THRESHOLD ||
-    getCount(partMemory["ピーちゃん"]) >= PART_THRESHOLD;
-
-  if(!hasName) return;
-
-  if(Math.random() < 0.12){
-    lastSpokenText = "ピーちゃん";
-    lastSpokenAt = Date.now();
-    setBirdImage("happy");
-    info.textContent = `ピーちゃん「ピーちゃん」`;
-    speakText("ピーちゃん");
-  }
-}
-
-// ===== イベント =====
-btn.addEventListener("click", startRec);
-
-// ===== 起動 =====
-async function init(){
-  bannedWords = await workerGetBlockedWords();
-  await loadCloudMemory();
-
-  setInterval(()=>{
-    if(isNight()){
-      setBirdImage("sleep");
-      bird.classList.remove("bob");
-      bird.style.left = "50%";
-      bird.style.top = "62%";
-      bird.style.transform = "translate(-50%,-50%) rotate(0deg)";
-      info.textContent = "ピーちゃんは寝ています";
-      return;
+    async function init() {
+      setupRecognition();
+      await loadBlockedWords();
+      await loadMemory();
     }
 
-    maybeAutoMove();
-  },1800);
-
-  setInterval(()=>{
-    if(isNight()) return;
-    maybeAutoChirp();
-    maybeTalkToSelf();
-    maybeNameCall();
-  },2400);
-
-  setInterval(()=>{
-    if(isNight()){
-      setBirdImage("sleep");
-    }else if(!isListening){
-      setBirdImage("idle");
-    }
-  },60000);
-
-  if(isNight()){
-    setBirdImage("sleep");
-    info.textContent = "ピーちゃんは寝ています";
-  }else{
-    setBirdImage("idle");
-    moveBirdNaturally(true);
-    info.textContent = "話しかけると覚えていきます";
-  }
-}
-
-init();
-</script>
-
+    init();
+  </script>
 </body>
 </html>

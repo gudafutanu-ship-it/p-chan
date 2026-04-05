@@ -22,8 +22,6 @@
       --btn-action-text:#fff;
 
       --btn-soft:#eef3ff;
-      --danger:#d9534f;
-
       --shadow:0 8px 24px rgba(0,0,0,0.08);
       --radius:20px;
     }
@@ -160,11 +158,6 @@
       color:#24408f;
     }
 
-    .miniBtn.warn{
-      background:#fff1f0;
-      color:var(--danger);
-    }
-
     .section{
       margin-top:16px;
     }
@@ -184,44 +177,6 @@
       font-size:15px;
       white-space:pre-wrap;
       word-break:break-word;
-    }
-
-    .small{
-      font-size:13px;
-      color:var(--sub);
-      line-height:1.7;
-    }
-
-    .memoryList{
-      margin-top:8px;
-      max-height:220px;
-      overflow:auto;
-      border:1px solid var(--line);
-      border-radius:14px;
-      background:#fff;
-      padding:10px 12px;
-      font-size:14px;
-      line-height:1.8;
-    }
-
-    .memoryList div{
-      border-bottom:1px dashed #e8ebf0;
-      padding:4px 0;
-    }
-
-    .memoryList div:last-child{
-      border-bottom:none;
-    }
-
-    .footerNote{
-      margin-top:16px;
-      font-size:13px;
-      color:#666;
-      line-height:1.8;
-      background:#fafbfe;
-      border:1px solid #e6eaf2;
-      border-radius:14px;
-      padding:12px;
     }
 
     @media (max-width:480px){
@@ -248,8 +203,7 @@
         <div class="titleBox">
           <h1 class="title">ピーちゃん</h1>
           <p class="subtitle">
-            話しかけると、覚えて、少しずつ反応するピーちゃんです。<br>
-            iPhoneでは最初のタップで音を有効化します。
+            話しかけると、覚えて、少しずつ反応するピーちゃんです。
           </p>
         </div>
       </div>
@@ -263,48 +217,23 @@
 
       <div class="row">
         <button id="peepBtn" class="miniBtn soft">♪ ピーと鳴く</button>
-        <button id="reloadBtn" class="miniBtn soft">↻ 記憶を読み直す</button>
-        <button id="resetMemoryBtn" class="miniBtn warn">記憶リセット</button>
       </div>
 
       <div class="section">
         <h2>いま聞こえた言葉</h2>
         <div id="heardBox" class="box">まだありません</div>
       </div>
-
-      <div class="section">
-        <h2>ピーちゃんの返事</h2>
-        <div id="replyBox" class="box">ここに返事が出ます</div>
-      </div>
-
-      <div class="section">
-        <h2>覚えている言葉</h2>
-        <div id="memoryList" class="memoryList">読み込み中...</div>
-      </div>
-
-      <div class="footerNote">
-        <strong>音が出ないときの確認</strong><br>
-        1. `p_chan.mp3` が `index.html` と同じ場所にあるか確認してください。<br>
-        2. iPhone は最初のタップ前だと音が鳴らないことがあります。最初に「話しかける」か「ピーと鳴く」を押してください。<br>
-        3. 消音モードや音量0になっていないか確認してください。<br>
-        4. `wav` より `mp3` または `m4a` のほうが iPhone で安定しやすいです。<br>
-        5. それでも無音なら `p_chan.m4a` に差し替えて、下の `AUDIO_URLS` を変更してください。
-      </div>
     </div>
   </div>
 
   <script>
     /*
-      ------------------------------------------------------------
-      必ず確認する場所
-      Worker本体の編集先は:
+      Worker本体の編集先は必ず:
       pichan-config/worker.js
-      ------------------------------------------------------------
     */
 
     const WORKER_BASE = "https://pichan-config.gudafutanu.workers.dev";
 
-    // iPhone向け。まず mp3 を優先。必要なら m4a に変更可。
     const AUDIO_URLS = [
       "./p_chan.mp3",
       "./p_chan.m4a"
@@ -312,20 +241,16 @@
 
     const talkBtn = document.getElementById("talkBtn");
     const peepBtn = document.getElementById("peepBtn");
-    const reloadBtn = document.getElementById("reloadBtn");
-    const resetMemoryBtn = document.getElementById("resetMemoryBtn");
 
     const statusMain = document.getElementById("statusMain");
     const statusSub = document.getElementById("statusSub");
     const heardBox = document.getElementById("heardBox");
-    const replyBox = document.getElementById("replyBox");
-    const memoryList = document.getElementById("memoryList");
     const birdFace = document.getElementById("birdFace");
 
     let recognition = null;
     let isListening = false;
+    let isStartingRecognition = false;
     let audioUnlocked = false;
-    let currentMemory = {};
     let blockedWords = [];
 
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
@@ -359,6 +284,10 @@
       return await res.json();
     }
 
+    function normalizeText(text) {
+      return String(text || "").trim().replace(/\s+/g, " ");
+    }
+
     async function loadBlockedWords() {
       try {
         const data = await fetchJSON(`${WORKER_BASE}/blocked/get`);
@@ -367,45 +296,6 @@
         console.warn("禁止語の取得に失敗:", e);
         blockedWords = [];
       }
-    }
-
-    async function loadMemory() {
-      try {
-        setStatus("記憶を読んでいます", "Cloudflare Worker から記憶を取得中です。");
-        const data = await fetchJSON(`${WORKER_BASE}/memory/get`);
-        currentMemory = data.memory || {};
-        renderMemory(currentMemory);
-        setStatus("待機中です", "ボタンを押すと聞き始めます。");
-      } catch (e) {
-        console.error(e);
-        setStatus("記憶の取得に失敗しました", "Worker URL や CORS 設定を確認してください。");
-        memoryList.innerHTML = "記憶の読み込みに失敗しました。";
-      }
-    }
-
-    function renderMemory(memoryObj) {
-      const entries = Object.entries(memoryObj || {})
-        .sort((a, b) => (b[1] || 0) - (a[1] || 0));
-
-      if (!entries.length) {
-        memoryList.innerHTML = "まだ覚えている言葉はありません。";
-        return;
-      }
-
-      memoryList.innerHTML = entries
-        .map(([word, count]) => `<div>${escapeHtml(word)}（${count}回）</div>`)
-        .join("");
-    }
-
-    function escapeHtml(str) {
-      return String(str)
-        .replaceAll("&", "&amp;")
-        .replaceAll("<", "&lt;")
-        .replaceAll(">", "&gt;");
-    }
-
-    function normalizeText(text) {
-      return String(text || "").trim().replace(/\s+/g, " ");
     }
 
     function containsBlockedWord(text) {
@@ -420,54 +310,11 @@
       const normalized = normalizeText(text);
       if (!normalized) return null;
 
-      const data = await fetchJSON(`${WORKER_BASE}/memory/learn`, {
+      return await fetchJSON(`${WORKER_BASE}/memory/learn`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ text: normalized })
       });
-
-      return data;
-    }
-
-    async function resetMemory() {
-      if (!confirm("本当に記憶をリセットしますか？")) return;
-      try {
-        const data = await fetchJSON(`${WORKER_BASE}/memory/reset`, {
-          method: "POST"
-        });
-        console.log(data);
-        currentMemory = {};
-        renderMemory(currentMemory);
-        replyBox.textContent = "記憶をリセットしました。";
-        setStatus("待機中です", "記憶は空になりました。");
-      } catch (e) {
-        console.error(e);
-        alert("記憶リセットに失敗しました。");
-      }
-    }
-
-    function chooseReply(text) {
-      const t = normalizeText(text);
-
-      if (!t) return "ピー？";
-      if (containsBlockedWord(t)) return "その言葉は覚えないよ。ピー。";
-
-      const memoryEntries = Object.entries(currentMemory || {});
-      const exact = memoryEntries.find(([k]) => normalizeText(k) === t);
-      if (exact) {
-        const count = exact[1] || 0;
-        if (count >= 10) return `それ知ってるよ。${t}。ピー！`;
-        if (count >= 5) return `なんだか聞いたことあるよ。${t}。`;
-      }
-
-      if (t.includes("おはよう")) return "おはよう。ピー！";
-      if (t.includes("かわいい")) return "ピーちゃん、かわいい？ ピー！";
-      if (t.includes("ピーちゃん")) return "ピー！ はーい。";
-      if (t.includes("こんにちは")) return "こんにちは。ピー。";
-      if (t.includes("おやすみ")) return "おやすみ。ピー。";
-      if (t.includes("好き")) return "うれしいよ。ピー！";
-
-      return "ピー！";
     }
 
     async function unlockAudio() {
@@ -529,12 +376,15 @@
       recognition.maxAlternatives = 1;
 
       recognition.onstart = () => {
+        isStartingRecognition = false;
         setListeningUI(true);
         setStatus("聞いています", "話しかけてください。");
       };
 
       recognition.onend = () => {
+        isStartingRecognition = false;
         setListeningUI(false);
+
         if (statusMain.textContent === "聞いています") {
           setStatus("待機中です", "ボタンを押すと聞き始めます。");
         }
@@ -542,12 +392,21 @@
 
       recognition.onerror = (event) => {
         console.warn("recognition error:", event.error);
+
+        isStartingRecognition = false;
         setListeningUI(false);
+
+        if (event.error === "aborted") {
+          setStatus("録音が中断されました", "もう一度ゆっくり押して話してください。");
+          return;
+        }
 
         if (event.error === "not-allowed") {
           setStatus("マイクが使えません", "ブラウザでマイクの許可を確認してください。");
         } else if (event.error === "no-speech") {
-          setStatus("声が聞き取れませんでした", "もう一度押して話してください。");
+          setStatus("声が聞き取れませんでした", "押したあと、少し早めに話してください。");
+        } else if (event.error === "audio-capture") {
+          setStatus("マイク入力が見つかりません", "端末設定を確認してください。");
         } else {
           setStatus("音声入力エラー", `原因: ${event.error}`);
         }
@@ -556,36 +415,21 @@
       recognition.onresult = async (event) => {
         const text = normalizeText(event.results?.[0]?.[0]?.transcript || "");
         heardBox.textContent = text || "聞き取れませんでした";
-        console.log("heard:", text);
 
-        if (!text) {
-          replyBox.textContent = "ピー？";
-          return;
-        }
+        if (!text) return;
 
         if (containsBlockedWord(text)) {
-          replyBox.textContent = "その言葉は覚えないよ。ピー。";
           setStatus("禁止語が含まれています", "保存はしませんでした。");
           await playPeep().catch(() => {});
           return;
         }
 
         try {
-          const res = await learnText(text);
-          if (res && res.memory) {
-            currentMemory = res.memory;
-            renderMemory(currentMemory);
-          } else {
-            await loadMemory();
-          }
-
-          const reply = chooseReply(text);
-          replyBox.textContent = reply;
+          await learnText(text);
           setStatus("覚えました", "Cloudflare KV に保存しました。");
           await playPeep().catch(() => {});
         } catch (e) {
           console.error(e);
-          replyBox.textContent = "覚えようとしたけど失敗したよ。";
           setStatus("保存に失敗しました", "Worker の /memory/learn を確認してください。");
         }
       };
@@ -593,6 +437,9 @@
 
     async function startListening() {
       if (!recognition) return;
+      if (isListening || isStartingRecognition) return;
+
+      isStartingRecognition = true;
 
       try {
         await unlockAudio();
@@ -604,11 +451,15 @@
         recognition.start();
       } catch (e) {
         console.warn("recognition.start error:", e);
+        isStartingRecognition = false;
+        setStatus("録音開始に失敗しました", "少し待ってからもう一度押してください。");
       }
     }
 
     function stopListening() {
       if (!recognition) return;
+      if (!isListening && !isStartingRecognition) return;
+
       try {
         recognition.stop();
       } catch (e) {
@@ -618,6 +469,8 @@
 
     talkBtn.addEventListener("click", async () => {
       await unlockAudio();
+
+      if (isStartingRecognition) return;
 
       if (isListening) {
         stopListening();
@@ -630,20 +483,10 @@
       await unlockAudio();
       const ok = await playPeep();
       if (ok) {
-        setStatus("ピーと鳴きました", "iPhoneで鳴れば音設定はかなり良好です。");
+        setStatus("ピーと鳴きました", "音は再生できています。");
       } else {
-        setStatus("音が出ませんでした", "mp3/m4a の場所や iPhone の消音設定を確認してください。");
+        setStatus("音が出ませんでした", "音声ファイルや端末設定を確認してください。");
       }
-    });
-
-    reloadBtn.addEventListener("click", async () => {
-      await loadBlockedWords();
-      await loadMemory();
-      replyBox.textContent = "記憶を読み直しました。";
-    });
-
-    resetMemoryBtn.addEventListener("click", async () => {
-      await resetMemory();
     });
 
     document.addEventListener("visibilitychange", () => {
@@ -655,7 +498,6 @@
     async function init() {
       setupRecognition();
       await loadBlockedWords();
-      await loadMemory();
     }
 
     init();

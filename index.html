@@ -4,7 +4,6 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
   <title>ピーちゃん</title>
-
   <style>
     body{
       margin:0;
@@ -13,21 +12,18 @@
       font-family:"Hiragino Kaku Gothic ProN","Yu Gothic",sans-serif;
       -webkit-tap-highlight-color: transparent;
     }
-
     .container{
       max-width:420px;
       margin:0 auto;
       padding:18px;
       text-align:center;
     }
-
     .card{
       background:#fff;
       border-radius:22px;
       padding:18px;
       box-shadow:0 10px 30px rgba(0,0,0,0.08);
     }
-
     .photoWrap{
       width:220px;
       height:220px;
@@ -35,20 +31,13 @@
       border-radius:24px;
       overflow:hidden;
       border:3px solid #ffe066;
-      transition:transform 0.18s ease;
     }
-
-    .photoWrap.listen{
-      transform:scale(1.03);
-    }
-
     .photoWrap img{
       width:100%;
       height:100%;
       object-fit:cover;
       display:block;
     }
-
     .status{
       min-height:30px;
       font-size:22px;
@@ -56,7 +45,6 @@
       margin-top:6px;
       word-break:break-word;
     }
-
     .heard{
       min-height:28px;
       margin-top:8px;
@@ -64,7 +52,19 @@
       color:#666;
       word-break:break-word;
     }
-
+    .debug{
+      margin-top:10px;
+      padding:10px;
+      border-radius:12px;
+      background:#f3f5f8;
+      font-size:13px;
+      color:#444;
+      text-align:left;
+      line-height:1.6;
+      white-space:pre-wrap;
+      word-break:break-word;
+      min-height:90px;
+    }
     .talkBtn{
       width:100%;
       margin-top:18px;
@@ -77,18 +77,10 @@
       background:#9aa0aa;
       color:#fff;
       cursor:pointer;
-      transition:background 0.2s ease, transform 0.08s ease;
     }
-
-    .talkBtn:active,
-    .peepBtn:active{
-      transform:scale(0.99);
-    }
-
     .talkBtn.on{
       background:#e25b5b;
     }
-
     .peepBtn{
       width:100%;
       margin-top:12px;
@@ -102,27 +94,18 @@
       color:#333;
       cursor:pointer;
     }
-
-    .flash{
-      animation:flashAnim 0.45s ease;
-    }
-
-    @keyframes flashAnim{
-      0%{ transform:scale(1); filter:brightness(1); }
-      40%{ transform:scale(1.02); filter:brightness(1.12); }
-      100%{ transform:scale(1); filter:brightness(1); }
-    }
   </style>
 </head>
 <body>
   <div class="container">
     <div class="card">
-      <div id="photoWrap" class="photoWrap">
+      <div class="photoWrap">
         <img id="pichanImg" src="listen2.jpg" alt="ピーちゃん">
       </div>
 
       <div id="status" class="status">待機中</div>
       <div id="heard" class="heard"></div>
+      <div id="debug" class="debug">ここに認識の流れが出ます</div>
 
       <button id="talkBtn" class="talkBtn">話しかける</button>
       <button id="peepBtn" class="peepBtn">ピーと鳴く</button>
@@ -130,32 +113,25 @@
   </div>
 
   <script>
-    /*
-      Worker本体の編集先は必ず:
-      pichan-config/worker.js
-    */
-
     const WORKER = "https://pichan-config.gudafutanu.workers.dev";
     const AUDIO_FILE = "p_chan.mp3";
 
     const FRONT_IMG = "listen.jpg";
     const SIDE_IMG  = "listen2.jpg";
 
-    const MAX_MEMORY = 30;
-
     let recognition = null;
     let isListening = false;
     let isStarting = false;
     let audioUnlocked = false;
 
-    let memory = [];       // [{ text, updatedAt }]
-    let blockedWords = []; // オンライン時のみ
+    let memory = [];
+    let blockedWords = [];
 
-    const talkBtn   = document.getElementById("talkBtn");
-    const peepBtn   = document.getElementById("peepBtn");
-    const statusEl  = document.getElementById("status");
-    const heardEl   = document.getElementById("heard");
-    const photoWrap = document.getElementById("photoWrap");
+    const talkBtn = document.getElementById("talkBtn");
+    const peepBtn = document.getElementById("peepBtn");
+    const statusEl = document.getElementById("status");
+    const heardEl = document.getElementById("heard");
+    const debugEl = document.getElementById("debug");
     const pichanImg = document.getElementById("pichanImg");
 
     function setStatus(text){
@@ -164,6 +140,12 @@
 
     function setHeard(text){
       heardEl.textContent = text || "";
+    }
+
+    function logDebug(text){
+      const now = new Date();
+      const time = now.toLocaleTimeString();
+      debugEl.textContent = `[${time}] ${text}\n` + debugEl.textContent;
     }
 
     function lookFront(){
@@ -178,35 +160,27 @@
       if(on){
         talkBtn.classList.add("on");
         talkBtn.textContent = "聞いています";
-        photoWrap.classList.add("listen");
         lookFront();
       }else{
         talkBtn.classList.remove("on");
         talkBtn.textContent = "話しかける";
-        photoWrap.classList.remove("listen");
         lookSide();
       }
-    }
-
-    function flashPet(){
-      photoWrap.classList.add("flash");
-      setTimeout(() => photoWrap.classList.remove("flash"), 450);
     }
 
     async function unlockAudio(){
       if(audioUnlocked) return true;
       try{
         const a = new Audio(AUDIO_FILE);
-        a.preload = "auto";
-        a.volume = 0.01;
         const p = a.play();
-        if(p && typeof p.then === "function") await p;
+        if (p && typeof p.then === "function") await p;
         a.pause();
         a.currentTime = 0;
         audioUnlocked = true;
+        logDebug("音の解放OK");
         return true;
       }catch(e){
-        console.warn("unlockAudio error:", e);
+        logDebug("音の解放失敗");
         return false;
       }
     }
@@ -214,13 +188,9 @@
     async function playPeep(){
       try{
         const a = new Audio(AUDIO_FILE);
-        a.preload = "auto";
-        a.volume = 1.0;
         await a.play();
-        return true;
       }catch(e){
-        console.warn("playPeep error:", e);
-        return false;
+        logDebug("ピー音再生失敗");
       }
     }
 
@@ -230,35 +200,30 @@
         speechSynthesis.cancel();
         const uttr = new SpeechSynthesisUtterance(text);
         uttr.lang = "ja-JP";
-        uttr.rate = 0.93;
-        uttr.pitch = 1.18;
-        uttr.onstart = () => lookFront();
-        uttr.onend = () => lookSide();
+        uttr.onstart = () => {
+          lookFront();
+          logDebug("読み上げ開始: " + text);
+        };
+        uttr.onend = () => {
+          lookSide();
+          logDebug("読み上げ終了");
+        };
         speechSynthesis.speak(uttr);
       }catch(e){
-        console.warn("speech error:", e);
+        logDebug("読み上げ失敗");
       }
     }
 
     function normalizeBasic(text){
       let t = String(text || "").toLowerCase().trim();
-
-      t = t.replace(/[ァ-ン]/g, s =>
-        String.fromCharCode(s.charCodeAt(0) - 0x60)
-      );
-
-      t = t.replace(/[Ａ-Ｚａ-ｚ０-９]/g, s =>
-        String.fromCharCode(s.charCodeAt(0) - 0xFEE0)
-      );
-
+      t = t.replace(/[ァ-ン]/g, s => String.fromCharCode(s.charCodeAt(0) - 0x60));
+      t = t.replace(/[Ａ-Ｚａ-ｚ０-９]/g, s => String.fromCharCode(s.charCodeAt(0) - 0xFEE0));
       t = t.replace(/[！!？?。、，,.・\s]/g, "");
-
       return t;
     }
 
     function toPichanLang(text){
       let t = normalizeBasic(text);
-
       t = t
         .replace(/ゃ/g, "や")
         .replace(/ゅ/g, "ゆ")
@@ -271,16 +236,9 @@
 
       t = t.replace(/っ/g, "");
       t = t.replace(/ー+/g, "");
-
-      t = t
-        .replace(/おう/g, "お")
-        .replace(/えい/g, "え")
-        .replace(/じ/g, "ぢ")
-        .replace(/ず/g, "づ");
-
+      t = t.replace(/おう/g, "お").replace(/えい/g, "え");
       t = t.replace(/(.)\1{2,}/g, "$1$1");
 
-      // 15文字くらいまで残す
       if (t.length >= 22) {
         t = t.slice(0, 15);
       } else if (t.length >= 18) {
@@ -290,101 +248,37 @@
       }
 
       if (!t) t = "ぴ";
-
       return t;
-    }
-
-    function isBlockedOnline(rawText){
-      if(!navigator.onLine) return false;
-
-      const p = toPichanLang(rawText);
-      return blockedWords.some(word => {
-        const bw = toPichanLang(word);
-        return bw && p.includes(bw);
-      });
     }
 
     function addMemory(rawText){
       const text = toPichanLang(rawText);
       const now = Date.now();
-
       memory = memory.filter(item => item.text !== text);
       memory.push({ text, updatedAt: now });
-
-      if(memory.length > MAX_MEMORY){
+      if(memory.length > 30){
         memory.sort((a, b) => a.updatedAt - b.updatedAt);
-        memory = memory.slice(memory.length - MAX_MEMORY);
+        memory = memory.slice(memory.length - 30);
       }
-
       return text;
     }
 
     function randomReplyDelay(){
-      return 2000 + Math.random() * 1500; // 2.0〜3.5秒
+      return 2000 + Math.random() * 1500;
     }
 
     async function replyWithWord(word){
       setStatus(word);
       setHeard(word);
-      flashPet();
 
       const delay = randomReplyDelay();
+      logDebug("返事待ち " + Math.round(delay) + "ms");
+
       setTimeout(async () => {
-        lookFront();
         await unlockAudio();
         await playPeep();
         speak(word);
       }, delay);
-    }
-
-    async function loadOnlineMemory(){
-      try{
-        const res = await fetch(WORKER + "/memory/get");
-        const data = await res.json();
-        const mem = data.memory || {};
-
-        const temp = [];
-        for(const [key, value] of Object.entries(mem)){
-          const text = toPichanLang(key);
-          const updatedAt = value?.updatedAt || Date.now();
-          temp.push({ text, updatedAt });
-        }
-
-        const uniq = new Map();
-        for(const item of temp){
-          uniq.set(item.text, item);
-        }
-
-        memory = Array.from(uniq.values())
-          .sort((a,b) => a.updatedAt - b.updatedAt)
-          .slice(-MAX_MEMORY);
-
-      }catch(e){
-        console.warn("memory/get error:", e);
-      }
-    }
-
-    async function loadBlockedWords(){
-      try{
-        const res = await fetch(WORKER + "/blocked/get");
-        const data = await res.json();
-        blockedWords = Array.isArray(data.blockedWords) ? data.blockedWords : [];
-      }catch(e){
-        console.warn("blocked/get error:", e);
-        blockedWords = [];
-      }
-    }
-
-    async function saveOnlineMemory(rawText){
-      try{
-        await fetch(WORKER + "/memory/learn", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ text: rawText })
-        });
-      }catch(e){
-        console.warn("memory/learn error:", e);
-      }
     }
 
     function initRecognition(){
@@ -393,10 +287,9 @@
       if(!SR){
         setStatus("音声認識非対応");
         talkBtn.disabled = true;
+        logDebug("SpeechRecognitionなし");
         return;
       }
-
-      setStatus("音声認識準備OK");
 
       recognition = new SR();
       recognition.lang = "ja-JP";
@@ -404,84 +297,95 @@
       recognition.continuous = false;
       recognition.maxAlternatives = 1;
 
+      setStatus("音声認識準備OK");
+      logDebug("音声認識準備OK");
+
       recognition.onstart = () => {
         isStarting = false;
         isListening = true;
         setListeningUI(true);
         setStatus("聞いています");
+        logDebug("onstart");
       };
 
-      recognition.onresult = async (e) => {
-        console.log("onresult fired", e);
+      recognition.onaudiostart = () => logDebug("onaudiostart");
+      recognition.onaudioend = () => logDebug("onaudioend");
+      recognition.onsoundstart = () => logDebug("onsoundstart");
+      recognition.onsoundend = () => logDebug("onsoundend");
+      recognition.onspeechstart = () => logDebug("onspeechstart");
+      recognition.onspeechend = () => logDebug("onspeechend");
+      recognition.onnomatch = () => logDebug("onnomatch");
 
+      recognition.onresult = async (e) => {
+        logDebug("onresult");
         try {
           const text = String(e.results[0][0].transcript || "").trim();
+          logDebug("認識文字: " + text);
 
           if (!text) {
             setStatus("きこえなかった");
-            stopRecognition();
-            return;
-          }
-
-          if (navigator.onLine && isBlockedOnline(text)) {
-            setStatus("...");
-            stopRecognition();
             return;
           }
 
           const pichanWord = addMemory(text);
           setHeard(pichanWord);
-
           await replyWithWord(pichanWord);
 
           if (navigator.onLine) {
-            await saveOnlineMemory(text);
+            try{
+              await fetch(WORKER + "/memory/learn", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ text })
+              });
+              logDebug("Worker保存OK");
+            }catch(err){
+              logDebug("Worker保存失敗");
+            }
           }
-
-          stopRecognition();
-
         } catch (err) {
-          console.error("onresult error:", err);
+          logDebug("onresult内エラー");
           setStatus("待機中");
-          stopRecognition();
         }
       };
 
       recognition.onerror = (e) => {
-        console.warn("recognition error:", e.error);
         isStarting = false;
         isListening = false;
         setListeningUI(false);
         setStatus("エラー: " + e.error);
+        logDebug("onerror: " + e.error);
       };
 
       recognition.onend = () => {
         isStarting = false;
         isListening = false;
         setListeningUI(false);
-
         if (statusEl.textContent === "聞いています") {
           setStatus("待機中");
         }
+        logDebug("onend");
       };
     }
 
     function startRecognition(){
-      if(!recognition) {
+      if(!recognition){
         setStatus("音声認識がありません");
+        logDebug("recognitionなし");
         return;
       }
       if(isListening || isStarting) return;
 
       isStarting = true;
       setStatus("録音開始中");
+      logDebug("startRecognition");
 
       try{
         recognition.start();
       }catch(e){
-        console.warn("recognition.start error:", e);
         isStarting = false;
         setStatus("録音開始失敗");
+        logDebug("start失敗");
       }
     }
 
@@ -489,27 +393,11 @@
       if(!recognition) return;
       try{
         recognition.stop();
+        logDebug("stopRecognition");
       }catch(e){
-        console.warn("recognition.stop error:", e);
+        logDebug("stop失敗");
       }
     }
-
-    // たまに勝手に向きが変わる
-    setInterval(() => {
-      if (isListening) return;
-      if (document.hidden) return;
-
-      if (Math.random() < 0.25) {
-        if (pichanImg.src.includes("listen.jpg")) {
-          lookSide();
-        } else {
-          lookFront();
-          setTimeout(() => {
-            if (!isListening) lookSide();
-          }, 900 + Math.random() * 1200);
-        }
-      }
-    }, 3000);
 
     talkBtn.addEventListener("click", () => {
       if(isStarting) return;
@@ -525,37 +413,12 @@
       await unlockAudio();
       setStatus("ぴー");
       setHeard("ぴー");
-      flashPet();
-      lookFront();
       await playPeep();
       speak("ぴー");
     });
 
-    document.addEventListener("visibilitychange", () => {
-      if(document.hidden && isListening){
-        stopRecognition();
-      }
-    });
-
-    window.addEventListener("online", async () => {
-      await loadBlockedWords();
-      await loadOnlineMemory();
-      setStatus("待機中");
-    });
-
-    window.addEventListener("offline", () => {
-      blockedWords = [];
-      setStatus("待機中");
-    });
-
     async function init(){
       initRecognition();
-
-      if(navigator.onLine){
-        await loadBlockedWords();
-        await loadOnlineMemory();
-      }
-
       lookSide();
     }
 

@@ -12,7 +12,6 @@
       --text:#443c33;
       --sub:#7a6f63;
       --accent:#f2b84b;
-      --accent2:#f59f00;
       --danger:#d94b4b;
       --off:#b7b7b7;
       --line:#eadfce;
@@ -23,8 +22,7 @@
       margin:0;
       font-family:"Hiragino Kaku Gothic ProN","Yu Gothic","Meiryo",system-ui,sans-serif;
       color:var(--text);
-      background:
-        radial-gradient(circle at top, var(--bg1), var(--bg2));
+      background:radial-gradient(circle at top, var(--bg1), var(--bg2));
       min-height:100vh;
       display:flex;
       align-items:center;
@@ -105,7 +103,6 @@
       75%{ transform:translateY(2px) rotate(1deg); }
       100%{ transform:translateY(0px) rotate(0deg); }
     }
-
     .status-row{
       display:flex;
       justify-content:center;
@@ -122,7 +119,6 @@
       padding:8px 12px;
       font-size:.9rem;
     }
-
     .controls{
       padding:14px 16px 12px;
       display:grid;
@@ -189,7 +185,6 @@
     .user{ color:#234; }
     .birdtext{ color:#8a4c00; }
     .muted{ color:var(--sub); }
-
     .footer{
       padding:0 16px 18px;
       color:var(--sub);
@@ -197,9 +192,7 @@
       text-align:center;
       line-height:1.5;
     }
-
     .hidden{ display:none !important; }
-
     @media (max-width:420px){
       h1{ font-size:1.42rem; }
       button{ font-size:1rem; }
@@ -227,7 +220,6 @@
 
     <div class="controls">
       <button id="wakeBtn" class="wake-btn">ピーちゃんを呼ぶ</button>
-
       <button id="talkBtn" class="talk-btn" disabled>話しかける</button>
 
       <div class="small-row">
@@ -251,18 +243,9 @@
   <audio id="peepAudio" src="p_chan.mp3" preload="auto" playsinline webkit-playsinline></audio>
 
   <script>
-    /**********************
-     * 設定
-     **********************/
-    const API_BASE = ""; 
-    // 例:
-    // const API_BASE = "https://pichan-config.gudafutanu.workers.dev";
-
+    const API_BASE = "https://pichan-config.gudafutanu.workers.dev";
     const MAX_MEMORY = 30;
 
-    /**********************
-     * 要素
-     **********************/
     const bird = document.getElementById("bird");
     const wakeBtn = document.getElementById("wakeBtn");
     const talkBtn = document.getElementById("talkBtn");
@@ -274,9 +257,6 @@
     const audioPill = document.getElementById("audioPill");
     const peepAudio = document.getElementById("peepAudio");
 
-    /**********************
-     * 状態
-     **********************/
     let isAwake = false;
     let isListening = false;
     let audioUnlocked = false;
@@ -288,9 +268,6 @@
     let idleTimer = null;
     let speakTimer = null;
 
-    /**********************
-     * 共通
-     **********************/
     function setSub(msg){
       subMessage.textContent = msg;
     }
@@ -324,6 +301,8 @@
         talkBtn.disabled = true;
         repeatBtn.disabled = true;
         talkBtn.classList.remove("enabled", "listening");
+        talkBtn.textContent = "話しかける";
+        audioPill.textContent = audioUnlocked ? "音：準備できました" : "音：まだ準備していません";
         return;
       }
 
@@ -392,11 +371,9 @@
     }
 
     function toHiraganaLike(text){
-      // 厳密変換ではなく「それっぽさ」優先
-      let t = String(text || "")
+      return String(text || "")
         .normalize("NFKC")
         .replace(/[ァ-ヶ]/g, s => String.fromCharCode(s.charCodeAt(0) - 0x60));
-      return t;
     }
 
     function toPichanSpeech(text){
@@ -427,12 +404,7 @@
       const n = normalizeBirdKey(rawText);
 
       if (n.includes("ぴーちゃん")) {
-        const arr = [
-          "ぴーちゃん！",
-          "ぴー！",
-          "ぴーちゃん ここ！",
-          "ぴーぴー！"
-        ];
+        const arr = ["ぴーちゃん！", "ぴー！", "ぴーちゃん ここ！", "ぴーぴー！"];
         return arr[Math.floor(Math.random() * arr.length)];
       }
 
@@ -446,7 +418,7 @@
     }
 
     function randomDelay(){
-      return 2000 + Math.floor(Math.random() * 1500); // 2.0〜3.5秒
+      return 2000 + Math.floor(Math.random() * 1500);
     }
 
     function cancelSpeakTimer(){
@@ -454,9 +426,6 @@
       speakTimer = null;
     }
 
-    /**********************
-     * 音
-     **********************/
     async function unlockAudio(){
       if (audioUnlocked) return true;
 
@@ -465,12 +434,18 @@
         peepAudio.currentTime = 0;
 
         const p = peepAudio.play();
-        if (p && typeof p.then === "function") {
-          await p;
-        }
+        if (p && typeof p.then === "function") await p;
 
         peepAudio.pause();
         peepAudio.currentTime = 0;
+
+        if ("speechSynthesis" in window) {
+          window.speechSynthesis.cancel();
+          const warm = new SpeechSynthesisUtterance("");
+          warm.volume = 0;
+          window.speechSynthesis.speak(warm);
+        }
+
         audioUnlocked = true;
         updateUI();
         return true;
@@ -496,21 +471,54 @@
       }
     }
 
-    function speakText(text){
+    function speakText(text) {
       if (!("speechSynthesis" in window)) return;
-      window.speechSynthesis.cancel();
 
-      const uttr = new SpeechSynthesisUtterance(text);
-      uttr.lang = "ja-JP";
-      uttr.rate = 0.95;
-      uttr.pitch = 1.45;
-      uttr.volume = 1;
-      window.speechSynthesis.speak(uttr);
+      try {
+        const synth = window.speechSynthesis;
+        synth.cancel();
+
+        const doSpeak = () => {
+          const uttr = new SpeechSynthesisUtterance(text);
+          uttr.lang = "ja-JP";
+          uttr.rate = 0.9;
+          uttr.pitch = 1.2;
+          uttr.volume = 1.0;
+
+          const voices = synth.getVoices();
+          const jaVoice =
+            voices.find(v => v.lang === "ja-JP") ||
+            voices.find(v => v.lang && v.lang.startsWith("ja")) ||
+            null;
+
+          if (jaVoice) {
+            uttr.voice = jaVoice;
+          }
+
+          synth.speak(uttr);
+
+          setTimeout(() => {
+            try {
+              if (synth.paused) synth.resume();
+            } catch (_) {}
+          }, 100);
+        };
+
+        const voices = synth.getVoices();
+
+        if (voices.length > 0) {
+          setTimeout(doSpeak, 120);
+        } else {
+          synth.onvoiceschanged = () => {
+            setTimeout(doSpeak, 120);
+          };
+          setTimeout(doSpeak, 300);
+        }
+      } catch (e) {
+        console.warn("読み上げ失敗", e);
+      }
     }
 
-    /**********************
-     * API
-     **********************/
     async function fetchJSON(path, options = {}){
       const res = await fetch(API_BASE + path, {
         headers: {
@@ -541,7 +549,6 @@
     async function loadMemory(){
       try {
         const data = await fetchJSON("/memory/get", { method: "GET" });
-
         const arr = Array.isArray(data) ? data
           : Array.isArray(data.items) ? data.items
           : Array.isArray(data.memory) ? data.memory
@@ -593,9 +600,6 @@
       }
     }
 
-    /**********************
-     * 音声認識
-     **********************/
     function initRecognition(){
       const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
       if (!SR) {
@@ -652,7 +656,11 @@
         cancelSpeakTimer();
         speakTimer = setTimeout(async () => {
           await playPeep();
-          speakText(reply);
+
+          setTimeout(() => {
+            speakText(reply);
+          }, 250);
+
           addLog("ピーちゃん： " + reply, "birdtext");
           setSub("お返事しました");
           setBirdImage("listen2.jpg", "idleMove");
@@ -674,6 +682,8 @@
           setSub("マイクの許可が必要です");
         } else if (err === "no-speech") {
           setSub("声が聞こえませんでした");
+        } else if (err === "audio-capture") {
+          setSub("マイクが使えません。Safariのマイク許可を確認してください");
         } else {
           setSub("音声認識エラー：" + err);
         }
@@ -712,9 +722,6 @@
       }
     }
 
-    /**********************
-     * 起動・睡眠
-     **********************/
     async function wakeUp(){
       if (isAwake) return;
 
@@ -737,7 +744,12 @@
       clearDefaultLogIfNeeded();
 
       await playPeep();
-      speakText("ぴーちゃん");
+
+      setTimeout(() => {
+        speakText("ぴーちゃん");
+      }, 250);
+
+      lastReply = "ぴーちゃん！";
       addLog("ピーちゃん： ぴーちゃん！", "birdtext");
 
       setSub("起きました");
@@ -775,20 +787,19 @@
       updateUI();
     }
 
-    /**********************
-     * もう一度返事
-     **********************/
     async function repeatReply(){
       if (!isAwake || !lastReply) return;
+
       await playPeep();
-      speakText(lastReply);
+
+      setTimeout(() => {
+        speakText(lastReply);
+      }, 250);
+
       addLog("ピーちゃん： " + lastReply, "birdtext");
       setSub("もう一度お返事しました");
     }
 
-    /**********************
-     * イベント
-     **********************/
     wakeBtn.addEventListener("click", wakeUp);
     talkBtn.addEventListener("click", startListening);
     repeatBtn.addEventListener("click", repeatReply);
@@ -811,9 +822,6 @@
       }
     });
 
-    /**********************
-     * 初期化
-     **********************/
     initRecognition();
     updateUI();
   </script>

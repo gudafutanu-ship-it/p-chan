@@ -2,505 +2,312 @@
 <html lang="ja">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>ピーちゃん</title>
+
   <style>
-    :root{
-      --bg:#f7f8fb;
-      --card:#ffffff;
-      --text:#222;
-      --sub:#666;
-      --line:#dcdfe6;
-
-      --btn-off:#9aa0aa;
-      --btn-off-text:#fff;
-
-      --btn-listening:#e25b5b;
-      --btn-listening-text:#fff;
-
-      --btn-action:#4d7cff;
-      --btn-action-text:#fff;
-
-      --btn-soft:#eef3ff;
-      --shadow:0 8px 24px rgba(0,0,0,0.08);
-      --radius:20px;
-    }
-
-    *{ box-sizing:border-box; }
-
     body{
       margin:0;
-      font-family:"Hiragino Kaku Gothic ProN","Yu Gothic","Meiryo",sans-serif;
-      background:var(--bg);
-      color:var(--text);
-      -webkit-tap-highlight-color: transparent;
+      font-family:"Hiragino Kaku Gothic ProN","Yu Gothic",sans-serif;
+      background:#f7f8fb;
     }
 
     .wrap{
-      max-width:720px;
-      margin:0 auto;
-      padding:16px 14px 40px;
+      max-width:600px;
+      margin:auto;
+      padding:16px;
     }
 
     .card{
-      background:var(--card);
-      border-radius:var(--radius);
-      box-shadow:var(--shadow);
-      padding:18px;
+      background:#fff;
+      border-radius:20px;
+      padding:20px;
+      box-shadow:0 10px 25px rgba(0,0,0,0.1);
     }
 
     .top{
       display:flex;
       align-items:center;
       gap:14px;
-      margin-bottom:14px;
     }
 
     .bird{
       width:110px;
       height:110px;
       border-radius:50%;
-      background:#fff8dc;
-      display:flex;
-      align-items:center;
-      justify-content:center;
-      font-size:58px;
-      flex-shrink:0;
-      border:3px solid #f0df8a;
-      transition:transform .2s ease;
+      overflow:hidden;
+      border:3px solid #ffe066;
+    }
+
+    .bird img{
+      width:100%;
+      height:100%;
+      object-fit:cover;
     }
 
     .bird.listen{
       transform:scale(1.05);
+      transition:0.2s;
     }
 
-    .titleBox{
-      flex:1;
-      min-width:0;
-    }
-
-    .title{
-      font-size:28px;
-      font-weight:700;
-      margin:0 0 4px 0;
+    h1{
+      margin:0;
+      font-size:26px;
     }
 
     .subtitle{
       font-size:14px;
-      color:var(--sub);
-      line-height:1.6;
-      margin:0;
+      color:#666;
     }
 
     .status{
-      margin:14px 0 8px;
-      padding:12px 14px;
-      border-radius:14px;
+      margin-top:16px;
       background:#f3f5f8;
-      font-size:15px;
-      line-height:1.6;
-    }
-
-    .status strong{
-      font-size:16px;
+      padding:12px;
+      border-radius:14px;
     }
 
     .talkBtn{
       width:100%;
-      min-height:74px;
+      margin-top:14px;
+      padding:18px;
+      font-size:22px;
       border:none;
-      border-radius:18px;
-      font-size:24px;
-      font-weight:700;
-      cursor:pointer;
-      transition:transform .08s ease, opacity .2s ease, background .2s ease;
-      margin-top:12px;
-      touch-action:manipulation;
-    }
-
-    .talkBtn:active{
-      transform:scale(0.985);
-    }
-
-    .talkBtn.off{
-      background:var(--btn-off);
-      color:var(--btn-off-text);
+      border-radius:16px;
+      background:#9aa0aa;
+      color:#fff;
     }
 
     .talkBtn.on{
-      background:var(--btn-listening);
-      color:var(--btn-listening-text);
-      box-shadow:0 0 0 6px rgba(226,91,91,0.14);
+      background:#e25b5b;
     }
 
     .row{
-      display:flex;
-      gap:10px;
-      margin-top:12px;
-      flex-wrap:wrap;
+      margin-top:10px;
     }
 
     .miniBtn{
-      flex:1 1 160px;
-      min-height:48px;
+      width:100%;
+      padding:14px;
       border:none;
       border-radius:14px;
-      background:var(--btn-action);
-      color:var(--btn-action-text);
       font-size:16px;
-      font-weight:700;
-      cursor:pointer;
-      padding:10px 14px;
-    }
-
-    .miniBtn.soft{
-      background:var(--btn-soft);
-      color:#24408f;
+      font-weight:bold;
+      background:#ffe066;
     }
 
     .section{
       margin-top:16px;
     }
 
-    .section h2{
-      font-size:18px;
-      margin:0 0 10px;
-    }
-
     .box{
-      border:1px solid var(--line);
-      border-radius:14px;
       background:#fff;
-      padding:12px;
-      line-height:1.7;
-      min-height:74px;
-      font-size:15px;
-      white-space:pre-wrap;
-      word-break:break-word;
+      border:1px solid #ddd;
+      border-radius:14px;
+      padding:10px;
+      min-height:60px;
     }
 
-    @media (max-width:480px){
-      .bird{
-        width:92px;
-        height:92px;
-        font-size:48px;
-      }
-      .title{
-        font-size:24px;
-      }
-      .talkBtn{
-        min-height:78px;
-        font-size:23px;
-      }
+    /* チカチカ */
+    .flash{
+      animation:flashAnim 0.5s;
     }
+
+    @keyframes flashAnim{
+      0%{background:#fff3b0;}
+      50%{background:#ffe066;}
+      100%{background:#f3f5f8;}
+    }
+
   </style>
 </head>
+
 <body>
-  <div class="wrap">
-    <div class="card">
-      <div class="top">
-        <div id="birdFace" class="bird">🐥</div>
-        <div class="titleBox">
-          <h1 class="title">ピーちゃん</h1>
-          <p class="subtitle">
-            話しかけると、覚えて、少しずつ反応するピーちゃんです。
-          </p>
+<div class="wrap">
+  <div class="card">
+
+    <div class="top">
+      <div id="birdFace" class="bird">
+        <img src="listen2.jpg">
+      </div>
+
+      <div>
+        <h1>ピーちゃん</h1>
+        <div class="subtitle">
+          話しかけると覚えるよ
         </div>
       </div>
-
-      <div id="statusBox" class="status">
-        <strong id="statusMain">待機中です</strong><br>
-        <span id="statusSub">ボタンを押すと聞き始めます。</span>
-      </div>
-
-      <button id="talkBtn" class="talkBtn off">🎤 話しかける</button>
-
-      <div class="row">
-        <button id="peepBtn" class="miniBtn soft">♪ ピーと鳴く</button>
-      </div>
-
-      <div class="section">
-        <h2>いま聞こえた言葉</h2>
-        <div id="heardBox" class="box">まだありません</div>
-      </div>
     </div>
+
+    <div id="statusBox" class="status">
+      <div id="statusMain">待機中です</div>
+      <div id="statusSub">ボタンを押してください</div>
+    </div>
+
+    <button id="talkBtn" class="talkBtn">🎤 話しかける</button>
+
+    <div class="row">
+      <button id="peepBtn" class="miniBtn">♪ ピーと鳴く</button>
+    </div>
+
+    <div class="section">
+      <h3>いま聞こえた言葉</h3>
+      <div id="heardBox" class="box">---</div>
+    </div>
+
   </div>
+</div>
 
-  <script>
-    /*
-      Worker本体の編集先は必ず:
-      pichan-config/worker.js
-    */
+<script>
+const WORKER = "https://pichan-config.gudafutanu.workers.dev";
 
-    const WORKER_BASE = "https://pichan-config.gudafutanu.workers.dev";
+let recognition;
+let isListening = false;
+let isStarting = false;
+let audioUnlocked = false;
+let blockedWords = [];
 
-    const AUDIO_URLS = [
-      "./p_chan.mp3",
-      "./p_chan.m4a"
-    ];
+const talkBtn = document.getElementById("talkBtn");
+const peepBtn = document.getElementById("peepBtn");
+const heardBox = document.getElementById("heardBox");
+const statusMain = document.getElementById("statusMain");
+const statusSub = document.getElementById("statusSub");
+const statusBox = document.getElementById("statusBox");
+const birdFace = document.getElementById("birdFace");
 
-    const talkBtn = document.getElementById("talkBtn");
-    const peepBtn = document.getElementById("peepBtn");
+function setStatus(a,b=""){
+  statusMain.textContent = a;
+  statusSub.textContent = b;
+}
 
-    const statusMain = document.getElementById("statusMain");
-    const statusSub = document.getElementById("statusSub");
-    const heardBox = document.getElementById("heardBox");
-    const birdFace = document.getElementById("birdFace");
+function flash(){
+  statusBox.classList.add("flash");
+  setTimeout(()=>statusBox.classList.remove("flash"),500);
+}
 
-    let recognition = null;
-    let isListening = false;
-    let isStartingRecognition = false;
-    let audioUnlocked = false;
-    let blockedWords = [];
+async function unlockAudio(){
+  if(audioUnlocked) return;
+  try{
+    let a = new Audio("p_chan.mp3");
+    await a.play();
+    a.pause();
+    audioUnlocked = true;
+  }catch(e){}
+}
 
-    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+async function playPeep(){
+  try{
+    let a = new Audio("p_chan.mp3");
+    await a.play();
+  }catch(e){}
+}
 
-    function setStatus(main, sub = "") {
-      statusMain.textContent = main;
-      statusSub.textContent = sub;
+async function loadBlocked(){
+  try{
+    let r = await fetch(WORKER+"/blocked/get");
+    let d = await r.json();
+    blockedWords = d.words || [];
+  }catch(e){}
+}
+
+function isBlocked(t){
+  return blockedWords.some(w=>t.includes(w));
+}
+
+async function learn(t){
+  await fetch(WORKER+"/memory/learn",{
+    method:"POST",
+    headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({text:t})
+  });
+}
+
+function startRec(){
+  if(isListening || isStarting) return;
+  isStarting = true;
+  recognition.start();
+}
+
+function stopRec(){
+  if(!isListening) return;
+  recognition.stop();
+}
+
+function initRec(){
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if(!SR){
+    setStatus("非対応");
+    return;
+  }
+
+  recognition = new SR();
+  recognition.lang = "ja-JP";
+
+  recognition.onstart = ()=>{
+    isStarting = false;
+    isListening = true;
+    talkBtn.classList.add("on");
+    setStatus("聞いています");
+    birdFace.classList.add("listen");
+  };
+
+  recognition.onend = ()=>{
+    isListening = false;
+    talkBtn.classList.remove("on");
+    birdFace.classList.remove("listen");
+    setStatus("待機中です");
+  };
+
+  recognition.onerror = (e)=>{
+    isStarting = false;
+    isListening = false;
+    talkBtn.classList.remove("on");
+
+    if(e.error==="aborted"){
+      setStatus("中断されました");
+    }
+  };
+
+  recognition.onresult = async (e)=>{
+    let text = e.results[0][0].transcript;
+    heardBox.textContent = text;
+
+    if(isBlocked(text)){
+      setStatus("禁止語です");
+      return;
     }
 
-    function setListeningUI(listening) {
-      isListening = listening;
-      if (listening) {
-        talkBtn.classList.remove("off");
-        talkBtn.classList.add("on");
-        talkBtn.textContent = "🛑 聞いています";
-        birdFace.classList.add("listen");
-      } else {
-        talkBtn.classList.remove("on");
-        talkBtn.classList.add("off");
-        talkBtn.textContent = "🎤 話しかける";
-        birdFace.classList.remove("listen");
-      }
-    }
+    await learn(text);
 
-    async function fetchJSON(url, options = {}) {
-      const res = await fetch(url, options);
-      if (!res.ok) {
-        const txt = await res.text().catch(() => "");
-        throw new Error(`HTTP ${res.status} ${txt}`);
-      }
-      return await res.json();
-    }
+    setStatus("覚えました");
+    flash();
 
-    function normalizeText(text) {
-      return String(text || "").trim().replace(/\s+/g, " ");
-    }
+    await playPeep();
+  };
+}
 
-    async function loadBlockedWords() {
-      try {
-        const data = await fetchJSON(`${WORKER_BASE}/blocked/get`);
-        blockedWords = Array.isArray(data.words) ? data.words : [];
-      } catch (e) {
-        console.warn("禁止語の取得に失敗:", e);
-        blockedWords = [];
-      }
-    }
+talkBtn.onclick = async ()=>{
+  await unlockAudio();
 
-    function containsBlockedWord(text) {
-      const t = normalizeText(text).toLowerCase();
-      return blockedWords.some(word => {
-        const w = normalizeText(word).toLowerCase();
-        return w && t.includes(w);
-      });
-    }
+  if(isListening){
+    stopRec();
+  }else{
+    startRec();
+  }
+};
 
-    async function learnText(text) {
-      const normalized = normalizeText(text);
-      if (!normalized) return null;
+peepBtn.onclick = async ()=>{
+  await unlockAudio();
+  playPeep();
+};
 
-      return await fetchJSON(`${WORKER_BASE}/memory/learn`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ text: normalized })
-      });
-    }
+async function init(){
+  await loadBlocked();
+  initRec();
+}
 
-    async function unlockAudio() {
-      if (audioUnlocked) return true;
+init();
+</script>
 
-      for (const src of AUDIO_URLS) {
-        try {
-          const a = new Audio(src);
-          a.preload = "auto";
-          a.volume = 0.01;
-          a.muted = false;
-
-          const playPromise = a.play();
-          if (playPromise && typeof playPromise.then === "function") {
-            await playPromise;
-          }
-
-          a.pause();
-          a.currentTime = 0;
-          audioUnlocked = true;
-          console.log("audio unlock success:", src);
-          return true;
-        } catch (e) {
-          console.warn("audio unlock failed:", src, e);
-        }
-      }
-
-      console.warn("audio unlock failed all sources");
-      return false;
-    }
-
-    async function playPeep() {
-      for (const src of AUDIO_URLS) {
-        try {
-          const a = new Audio(src);
-          a.preload = "auto";
-          a.volume = 1.0;
-          await a.play();
-          return true;
-        } catch (e) {
-          console.warn("play failed:", src, e);
-        }
-      }
-      return false;
-    }
-
-    function setupRecognition() {
-      if (!SpeechRecognition) {
-        setStatus("音声認識に非対応です", "このブラウザでは音声入力が使えません。");
-        talkBtn.disabled = true;
-        talkBtn.textContent = "音声入力非対応";
-        return;
-      }
-
-      recognition = new SpeechRecognition();
-      recognition.lang = "ja-JP";
-      recognition.interimResults = false;
-      recognition.continuous = false;
-      recognition.maxAlternatives = 1;
-
-      recognition.onstart = () => {
-        isStartingRecognition = false;
-        setListeningUI(true);
-        setStatus("聞いています", "話しかけてください。");
-      };
-
-      recognition.onend = () => {
-        isStartingRecognition = false;
-        setListeningUI(false);
-
-        if (statusMain.textContent === "聞いています") {
-          setStatus("待機中です", "ボタンを押すと聞き始めます。");
-        }
-      };
-
-      recognition.onerror = (event) => {
-        console.warn("recognition error:", event.error);
-
-        isStartingRecognition = false;
-        setListeningUI(false);
-
-        if (event.error === "aborted") {
-          setStatus("録音が中断されました", "もう一度ゆっくり押して話してください。");
-          return;
-        }
-
-        if (event.error === "not-allowed") {
-          setStatus("マイクが使えません", "ブラウザでマイクの許可を確認してください。");
-        } else if (event.error === "no-speech") {
-          setStatus("声が聞き取れませんでした", "押したあと、少し早めに話してください。");
-        } else if (event.error === "audio-capture") {
-          setStatus("マイク入力が見つかりません", "端末設定を確認してください。");
-        } else {
-          setStatus("音声入力エラー", `原因: ${event.error}`);
-        }
-      };
-
-      recognition.onresult = async (event) => {
-        const text = normalizeText(event.results?.[0]?.[0]?.transcript || "");
-        heardBox.textContent = text || "聞き取れませんでした";
-
-        if (!text) return;
-
-        if (containsBlockedWord(text)) {
-          setStatus("禁止語が含まれています", "保存はしませんでした。");
-          await playPeep().catch(() => {});
-          return;
-        }
-
-        try {
-          await learnText(text);
-          setStatus("覚えました", "Cloudflare KV に保存しました。");
-          await playPeep().catch(() => {});
-        } catch (e) {
-          console.error(e);
-          setStatus("保存に失敗しました", "Worker の /memory/learn を確認してください。");
-        }
-      };
-    }
-
-    async function startListening() {
-      if (!recognition) return;
-      if (isListening || isStartingRecognition) return;
-
-      isStartingRecognition = true;
-
-      try {
-        await unlockAudio();
-      } catch (e) {
-        console.warn("unlock audio error:", e);
-      }
-
-      try {
-        recognition.start();
-      } catch (e) {
-        console.warn("recognition.start error:", e);
-        isStartingRecognition = false;
-        setStatus("録音開始に失敗しました", "少し待ってからもう一度押してください。");
-      }
-    }
-
-    function stopListening() {
-      if (!recognition) return;
-      if (!isListening && !isStartingRecognition) return;
-
-      try {
-        recognition.stop();
-      } catch (e) {
-        console.warn("recognition.stop error:", e);
-      }
-    }
-
-    talkBtn.addEventListener("click", async () => {
-      await unlockAudio();
-
-      if (isStartingRecognition) return;
-
-      if (isListening) {
-        stopListening();
-      } else {
-        startListening();
-      }
-    });
-
-    peepBtn.addEventListener("click", async () => {
-      await unlockAudio();
-      const ok = await playPeep();
-      if (ok) {
-        setStatus("ピーと鳴きました", "音は再生できています。");
-      } else {
-        setStatus("音が出ませんでした", "音声ファイルや端末設定を確認してください。");
-      }
-    });
-
-    document.addEventListener("visibilitychange", () => {
-      if (document.hidden && isListening) {
-        stopListening();
-      }
-    });
-
-    async function init() {
-      setupRecognition();
-      await loadBlockedWords();
-    }
-
-    init();
-  </script>
 </body>
 </html>

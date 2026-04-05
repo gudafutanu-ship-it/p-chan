@@ -142,7 +142,6 @@
     const SIDE_IMG  = "listen2.jpg";
 
     const MAX_MEMORY = 30;
-    const SILENCE_MS = 2000;
 
     let recognition = null;
     let isListening = false;
@@ -151,8 +150,6 @@
 
     let memory = [];       // [{ text, updatedAt }]
     let blockedWords = []; // オンライン時のみ
-
-    let silenceTimer = null;
 
     const talkBtn   = document.getElementById("talkBtn");
     const peepBtn   = document.getElementById("peepBtn");
@@ -241,26 +238,6 @@
       }catch(e){
         console.warn("speech error:", e);
       }
-    }
-
-    function clearSilenceTimer(){
-      if(silenceTimer){
-        clearTimeout(silenceTimer);
-        silenceTimer = null;
-      }
-    }
-
-    function resetSilenceTimer(){
-      clearSilenceTimer();
-      silenceTimer = setTimeout(() => {
-        if(isListening && recognition){
-          try{
-            recognition.stop();
-          }catch(e){
-            console.warn("silence stop error:", e);
-          }
-        }
-      }, SILENCE_MS);
     }
 
     function normalizeBasic(text){
@@ -354,6 +331,7 @@
       const delay = randomReplyDelay();
       setTimeout(async () => {
         lookFront();
+        await unlockAudio();
         await playPeep();
         speak(word);
       }, delay);
@@ -431,7 +409,6 @@
         isListening = true;
         setListeningUI(true);
         setStatus("聞いています");
-        resetSilenceTimer();
       };
 
       recognition.onresult = async (e) => {
@@ -474,7 +451,6 @@
         console.warn("recognition error:", e.error);
         isStarting = false;
         isListening = false;
-        clearSilenceTimer();
         setListeningUI(false);
         setStatus("エラー: " + e.error);
       };
@@ -482,7 +458,6 @@
       recognition.onend = () => {
         isStarting = false;
         isListening = false;
-        clearSilenceTimer();
         setListeningUI(false);
 
         if (statusEl.textContent === "聞いています") {
@@ -536,9 +511,7 @@
       }
     }, 3000);
 
-    talkBtn.addEventListener("click", async () => {
-      await unlockAudio();
-
+    talkBtn.addEventListener("click", () => {
       if(isStarting) return;
 
       if(isListening){
@@ -576,7 +549,6 @@
     });
 
     async function init(){
-      await unlockAudio();
       initRecognition();
 
       if(navigator.onLine){

@@ -1,288 +1,599 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>ピーちゃん</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <title>ピーちゃん</title>
 
-<style>
-body{
-  margin:0;
-  background:#f5f6f8;
-  font-family:sans-serif;
-  text-align:center;
-}
+  <style>
+    body{
+      margin:0;
+      background:#f5f6f8;
+      color:#222;
+      font-family:"Hiragino Kaku Gothic ProN","Yu Gothic",sans-serif;
+      -webkit-tap-highlight-color: transparent;
+    }
 
-.container{
-  max-width:420px;
-  margin:auto;
-  padding:20px;
-}
+    .container{
+      max-width:420px;
+      margin:0 auto;
+      padding:18px;
+      text-align:center;
+    }
 
-img{
-  width:220px;
-  border-radius:20px;
-}
+    .card{
+      background:#fff;
+      border-radius:22px;
+      padding:18px;
+      box-shadow:0 10px 30px rgba(0,0,0,0.08);
+    }
 
-.status{
-  margin-top:10px;
-  font-size:18px;
-}
+    .photoWrap{
+      width:220px;
+      height:220px;
+      margin:0 auto 12px;
+      border-radius:24px;
+      overflow:hidden;
+      border:3px solid #ffe066;
+      transition:transform 0.18s ease;
+    }
 
-.heard{
-  margin-top:10px;
-  font-size:16px;
-  color:#555;
-}
+    .photoWrap.listen{
+      transform:scale(1.03);
+    }
 
-.talkBtn{
-  width:100%;
-  margin-top:20px;
-  padding:28px;
-  font-size:22px;
-  border:none;
-  border-radius:16px;
-  background:#9aa0aa;
-  color:#fff;
-}
+    .photoWrap img{
+      width:100%;
+      height:100%;
+      object-fit:cover;
+      display:block;
+    }
 
-.talkBtn.on{
-  background:#e53935;
-}
+    .status{
+      min-height:30px;
+      font-size:22px;
+      font-weight:700;
+      margin-top:6px;
+      word-break:break-word;
+    }
 
-.peepBtn{
-  width:100%;
-  margin-top:10px;
-  padding:18px;
-  font-size:18px;
-  border:none;
-  border-radius:16px;
-  background:#ffd54f;
-}
-</style>
+    .heard{
+      min-height:28px;
+      margin-top:8px;
+      font-size:16px;
+      color:#666;
+      word-break:break-word;
+    }
+
+    .talkBtn{
+      width:100%;
+      margin-top:18px;
+      padding:28px 16px;
+      min-height:92px;
+      font-size:24px;
+      font-weight:700;
+      border:none;
+      border-radius:18px;
+      background:#9aa0aa;
+      color:#fff;
+      cursor:pointer;
+      transition:background 0.2s ease, transform 0.08s ease;
+    }
+
+    .talkBtn:active,
+    .peepBtn:active{
+      transform:scale(0.99);
+    }
+
+    .talkBtn.on{
+      background:#e25b5b;
+    }
+
+    .peepBtn{
+      width:100%;
+      margin-top:12px;
+      padding:16px;
+      min-height:58px;
+      font-size:18px;
+      font-weight:700;
+      border:none;
+      border-radius:16px;
+      background:#ffd54f;
+      color:#333;
+      cursor:pointer;
+    }
+
+    .flash{
+      animation:flashAnim 0.45s ease;
+    }
+
+    @keyframes flashAnim{
+      0%{ transform:scale(1); filter:brightness(1); }
+      40%{ transform:scale(1.02); filter:brightness(1.12); }
+      100%{ transform:scale(1); filter:brightness(1); }
+    }
+  </style>
 </head>
-
 <body>
-<div class="container">
+  <div class="container">
+    <div class="card">
+      <div id="photoWrap" class="photoWrap">
+        <img src="listen2.jpg" alt="ピーちゃん">
+      </div>
 
-<img src="listen2.jpg">
+      <div id="status" class="status">待機中</div>
+      <div id="heard" class="heard"></div>
 
-<div id="status" class="status">待機中</div>
-<div id="heard" class="heard"></div>
+      <button id="talkBtn" class="talkBtn">話しかける</button>
+      <button id="peepBtn" class="peepBtn">ピーと鳴く</button>
+    </div>
+  </div>
 
-<button id="talkBtn" class="talkBtn">話しかける</button>
-<button id="peepBtn" class="peepBtn">ピーと鳴く</button>
+  <script>
+    /*
+      Worker本体の編集先は必ず:
+      pichan-config/worker.js
+    */
 
-</div>
+    const WORKER = "https://pichan-config.gudafutanu.workers.dev";
+    const AUDIO_FILE = "p_chan.mp3";
 
-<script>
-const WORKER = "https://pichan-config.gudafutanu.workers.dev";
+    const MAX_MEMORY = 30;
+    const AUTO_MS = 2 * 60 * 1000; // 2分
+    const SILENCE_MS = 2000;       // 2秒無音で停止
 
-let recognition;
-let isListening = false;
+    let recognition = null;
+    let isListening = false;
+    let isStarting = false;
+    let audioUnlocked = false;
 
-let memory = [];
-let blocked = [];
+    let memory = [];       // [{ text, updatedAt }]
+    let blockedWords = []; // オンライン時のみ使用
 
-let silenceTimer = null;
-let autoTalkTimer = null;
+    let silenceTimer = null;
+    let autoTalkTimer = null;
 
-const MAX = 30;
-const AUTO_MS = 120000; // 2分
+    const talkBtn   = document.getElementById("talkBtn");
+    const peepBtn   = document.getElementById("peepBtn");
+    const statusEl  = document.getElementById("status");
+    const heardEl   = document.getElementById("heard");
+    const photoWrap = document.getElementById("photoWrap");
 
-const talkBtn = document.getElementById("talkBtn");
-const peepBtn = document.getElementById("peepBtn");
-const statusEl = document.getElementById("status");
-const heardEl = document.getElementById("heard");
-
-// =====================
-// 音
-// =====================
-const audio = new Audio("p_chan.mp3");
-
-async function playPeep(){
-  try{
-    audio.currentTime = 0;
-    await audio.play();
-  }catch(e){}
-}
-
-// =====================
-// 状態表示
-// =====================
-function setStatus(t){
-  statusEl.textContent = t;
-}
-
-// =====================
-// 記憶追加（共通）
-// =====================
-function addMemory(text){
-  text = text.trim();
-  if(!text) return;
-
-  // 重複削除
-  memory = memory.filter(t => t !== text);
-
-  memory.push(text);
-
-  if(memory.length > MAX){
-    memory.shift();
-  }
-}
-
-// =====================
-// ランダム発話
-// =====================
-function startAutoTalk(){
-  clearTimeout(autoTalkTimer);
-
-  autoTalkTimer = setTimeout(async ()=>{
-    if(memory.length > 0){
-      const word = memory[Math.floor(Math.random()*memory.length)];
-
-      setStatus(word);
-      heardEl.textContent = word;
-
-      speak(word);
-      await playPeep();
-    }else{
-      setStatus("ピーちゃん");
-      await playPeep();
+    function setStatus(text){
+      statusEl.textContent = text || "";
     }
 
-    startAutoTalk();
-  }, AUTO_MS);
-}
-
-// =====================
-// 音声合成
-// =====================
-function speak(text){
-  if(!window.speechSynthesis) return;
-
-  const uttr = new SpeechSynthesisUtterance(text);
-  uttr.lang = "ja-JP";
-  speechSynthesis.speak(uttr);
-}
-
-// =====================
-// 無音停止
-// =====================
-function resetSilence(){
-  clearTimeout(silenceTimer);
-
-  silenceTimer = setTimeout(()=>{
-    stopRec();
-  },2000);
-}
-
-// =====================
-// 音声認識
-// =====================
-function initRec(){
-  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-  recognition = new SpeechRecognition();
-
-  recognition.lang = "ja-JP";
-  recognition.interimResults = true;
-
-  recognition.onstart = ()=>{
-    isListening = true;
-    talkBtn.classList.add("on");
-    setStatus("聞いています");
-    resetSilence();
-  };
-
-  recognition.onresult = async (e)=>{
-    let text = e.results[e.results.length-1][0].transcript;
-
-    heardEl.textContent = text;
-    resetSilence();
-
-    if(!e.results[e.results.length-1].isFinal) return;
-
-    // オフライン
-    if(!navigator.onLine){
-      addMemory(text);
-      startAutoTalk();
-      stopRec();
-      return;
+    function setHeard(text){
+      heardEl.textContent = text || "";
     }
 
-    // オンライン（禁止語チェック）
-    if(blocked.some(w => text.includes(w))){
-      setStatus("...");
-      stopRec();
-      return;
+    function setListeningUI(on){
+      if(on){
+        talkBtn.classList.add("on");
+        talkBtn.textContent = "聞いています";
+        photoWrap.classList.add("listen");
+      }else{
+        talkBtn.classList.remove("on");
+        talkBtn.textContent = "話しかける";
+        photoWrap.classList.remove("listen");
+      }
     }
 
-    addMemory(text);
-    startAutoTalk();
+    function flashPet(){
+      photoWrap.classList.add("flash");
+      setTimeout(() => photoWrap.classList.remove("flash"), 450);
+    }
 
-    // KV保存
-    try{
-      await fetch(WORKER + "/memory/learn",{
-        method:"POST",
-        headers:{ "Content-Type":"application/json"},
-        body:JSON.stringify({text})
+    async function unlockAudio(){
+      if(audioUnlocked) return true;
+      try{
+        const a = new Audio(AUDIO_FILE);
+        a.preload = "auto";
+        a.volume = 0.01;
+        const p = a.play();
+        if(p && typeof p.then === "function") await p;
+        a.pause();
+        a.currentTime = 0;
+        audioUnlocked = true;
+        return true;
+      }catch(e){
+        console.warn("unlockAudio error:", e);
+        return false;
+      }
+    }
+
+    async function playPeep(){
+      try{
+        const a = new Audio(AUDIO_FILE);
+        a.preload = "auto";
+        a.volume = 1.0;
+        await a.play();
+        return true;
+      }catch(e){
+        console.warn("playPeep error:", e);
+        return false;
+      }
+    }
+
+    function speak(text){
+      if(!window.speechSynthesis) return;
+      try{
+        speechSynthesis.cancel();
+        const uttr = new SpeechSynthesisUtterance(text);
+        uttr.lang = "ja-JP";
+        uttr.rate = 0.95;
+        uttr.pitch = 1.2;
+        speechSynthesis.speak(uttr);
+      }catch(e){
+        console.warn("speech error:", e);
+      }
+    }
+
+    function clearSilenceTimer(){
+      if(silenceTimer){
+        clearTimeout(silenceTimer);
+        silenceTimer = null;
+      }
+    }
+
+    function resetSilenceTimer(){
+      clearSilenceTimer();
+      silenceTimer = setTimeout(() => {
+        if(isListening && recognition){
+          try{
+            recognition.stop();
+          }catch(e){
+            console.warn("silence stop error:", e);
+          }
+        }
+      }, SILENCE_MS);
+    }
+
+    function clearAutoTalkTimer(){
+      if(autoTalkTimer){
+        clearTimeout(autoTalkTimer);
+        autoTalkTimer = null;
+      }
+    }
+
+    function scheduleAutoTalk(){
+      clearAutoTalkTimer();
+      autoTalkTimer = setTimeout(async () => {
+        let word = pickRandomMemoryWord();
+
+        if(!word){
+          word = "ぴーちゃん";
+        }
+
+        setStatus(word);
+        setHeard(word);
+        flashPet();
+        await playPeep();
+        speak(word);
+
+        scheduleAutoTalk();
+      }, AUTO_MS);
+    }
+
+    function pickRandomMemoryWord(){
+      if(!memory.length) return "";
+      const item = memory[Math.floor(Math.random() * memory.length)];
+      return item?.text || "";
+    }
+
+    function normalizeBasic(text){
+      let t = String(text || "").toLowerCase().trim();
+
+      // カタカナ → ひらがな
+      t = t.replace(/[ァ-ン]/g, s =>
+        String.fromCharCode(s.charCodeAt(0) - 0x60)
+      );
+
+      // 全角英数字 → 半角
+      t = t.replace(/[Ａ-Ｚａ-ｚ０-９]/g, s =>
+        String.fromCharCode(s.charCodeAt(0) - 0xFEE0)
+      );
+
+      // 記号と空白はざっくり消す
+      t = t.replace(/[！!？?。、，,.・\s]/g, "");
+
+      return t;
+    }
+
+    function toPichanLang(text){
+      let t = normalizeBasic(text);
+
+      // 小さい文字を普通に寄せる
+      t = t
+        .replace(/ゃ/g, "や")
+        .replace(/ゅ/g, "ゆ")
+        .replace(/ょ/g, "よ")
+        .replace(/ぁ/g, "あ")
+        .replace(/ぃ/g, "い")
+        .replace(/ぅ/g, "う")
+        .replace(/ぇ/g, "え")
+        .replace(/ぉ/g, "お");
+
+      // 促音や長音を消す
+      t = t.replace(/っ/g, "");
+      t = t.replace(/ー+/g, "");
+
+      // 少し音痴っぽく丸める
+      t = t
+        .replace(/おう/g, "お")
+        .replace(/えい/g, "え")
+        .replace(/じ/g, "ぢ")
+        .replace(/ず/g, "づ");
+
+      // 同じ文字の連続は2つまで
+      t = t.replace(/(.)\1{2,}/g, "$1$1");
+
+      // 長い言葉は少し削るが、11文字までは残しやすくする
+      if (t.length >= 16) {
+        t = t.slice(0, 11);
+      } else if (t.length >= 12) {
+        t = t.slice(0, 10);
+      }
+
+      if (!t) {
+        t = "ぴ";
+      }
+
+      return t;
+    }
+
+    function isBlockedOnline(rawText){
+      if(!navigator.onLine) return false;
+
+      const p = toPichanLang(rawText);
+      return blockedWords.some(word => {
+        const bw = toPichanLang(word);
+        return bw && p.includes(bw);
       });
-    }catch(e){}
+    }
 
-    stopRec();
-  };
+    function addMemory(rawText){
+      const text = toPichanLang(rawText);
+      const now = Date.now();
 
-  recognition.onend = ()=>{
-    isListening = false;
-    talkBtn.classList.remove("on");
-    setStatus("待機中");
-  };
-}
+      memory = memory.filter(item => item.text !== text);
+      memory.push({ text, updatedAt: now });
 
-function startRec(){
-  if(isListening) return;
-  recognition.start();
-}
+      if(memory.length > MAX_MEMORY){
+        memory.sort((a, b) => a.updatedAt - b.updatedAt);
+        memory = memory.slice(memory.length - MAX_MEMORY);
+      }
 
-function stopRec(){
-  try{ recognition.stop(); }catch(e){}
-}
+      return text;
+    }
 
-// =====================
-// 初期化
-// =====================
-async function init(){
+    async function loadOnlineMemory(){
+      try{
+        const res = await fetch(WORKER + "/memory/get");
+        const data = await res.json();
+        const mem = data.memory || {};
 
-  initRec();
+        const temp = [];
+        for(const [key, value] of Object.entries(mem)){
+          const text = toPichanLang(key);
+          const updatedAt = value?.updatedAt || Date.now();
+          temp.push({ text, updatedAt });
+        }
 
-  // オンラインならデータ取得
-  if(navigator.onLine){
-    try{
-      const res = await fetch(WORKER + "/memory/get");
-      const data = await res.json();
+        const uniq = new Map();
+        for(const item of temp){
+          uniq.set(item.text, item);
+        }
 
-      memory = Object.keys(data.memory || {});
-    }catch(e){}
+        memory = Array.from(uniq.values())
+          .sort((a,b) => a.updatedAt - b.updatedAt)
+          .slice(-MAX_MEMORY);
 
-    try{
-      const res = await fetch(WORKER + "/blocked/get");
-      const data = await res.json();
+      }catch(e){
+        console.warn("memory/get error:", e);
+      }
+    }
 
-      blocked = data.list || [];
-    }catch(e){}
-  }
+    async function loadBlockedWords(){
+      try{
+        const res = await fetch(WORKER + "/blocked/get");
+        const data = await res.json();
+        blockedWords = Array.isArray(data.blockedWords) ? data.blockedWords : [];
+      }catch(e){
+        console.warn("blocked/get error:", e);
+        blockedWords = [];
+      }
+    }
 
-  startAutoTalk();
-}
+    async function saveOnlineMemory(rawText){
+      try{
+        await fetch(WORKER + "/memory/learn", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ text: rawText })
+        });
+      }catch(e){
+        console.warn("memory/learn error:", e);
+      }
+    }
 
-// =====================
-// イベント
-// =====================
-talkBtn.onclick = ()=> startRec();
-peepBtn.onclick = ()=> playPeep();
+    function initRecognition(){
+      const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
 
-init();
-</script>
+      if(!SR){
+        setStatus("音声認識非対応");
+        talkBtn.disabled = true;
+        return;
+      }
 
+      recognition = new SR();
+      recognition.lang = "ja-JP";
+      recognition.interimResults = true;
+      recognition.continuous = true;
+      recognition.maxAlternatives = 1;
+
+      recognition.onstart = () => {
+        isStarting = false;
+        isListening = true;
+        setListeningUI(true);
+        setStatus("聞いています");
+        resetSilenceTimer();
+      };
+
+      recognition.onresult = async (e) => {
+        try{
+          let latestText = "";
+          let hasFinal = false;
+
+          for(let i = e.resultIndex; i < e.results.length; i++){
+            const transcript = String(e.results[i][0].transcript || "").trim();
+            if(transcript){
+              latestText = transcript;
+              setHeard(toPichanLang(transcript));
+            }
+            if(e.results[i].isFinal && transcript){
+              hasFinal = true;
+              latestText = transcript;
+            }
+          }
+
+          resetSilenceTimer();
+
+          if(!hasFinal || !latestText) return;
+
+          if(navigator.onLine && isBlockedOnline(latestText)){
+            setStatus("...");
+            stopRecognition();
+            return;
+          }
+
+          const pichanWord = addMemory(latestText);
+          setHeard(pichanWord);
+          setStatus(pichanWord);
+          flashPet();
+
+          await playPeep();
+          speak(pichanWord);
+
+          if(navigator.onLine){
+            await saveOnlineMemory(latestText);
+          }
+
+          scheduleAutoTalk();
+          stopRecognition();
+
+        }catch(err){
+          console.error("onresult error:", err);
+          setStatus("待機中");
+          stopRecognition();
+        }
+      };
+
+      recognition.onerror = (e) => {
+        console.warn("recognition error:", e.error);
+        isStarting = false;
+        isListening = false;
+        clearSilenceTimer();
+        setListeningUI(false);
+
+        if(e.error === "aborted"){
+          setStatus("待機中");
+        }else if(e.error === "not-allowed"){
+          setStatus("まいくつかえない");
+        }else{
+          setStatus("待機中");
+        }
+      };
+
+      recognition.onend = () => {
+        isStarting = false;
+        isListening = false;
+        clearSilenceTimer();
+        setListeningUI(false);
+
+        if(!statusEl.textContent || statusEl.textContent === "聞いています"){
+          setStatus("待機中");
+        }
+      };
+    }
+
+    function startRecognition(){
+      if(!recognition) return;
+      if(isListening || isStarting) return;
+
+      isStarting = true;
+
+      try{
+        recognition.start();
+      }catch(e){
+        console.warn("recognition.start error:", e);
+        isStarting = false;
+        setStatus("待機中");
+      }
+    }
+
+    function stopRecognition(){
+      if(!recognition) return;
+      try{
+        recognition.stop();
+      }catch(e){
+        console.warn("recognition.stop error:", e);
+      }
+    }
+
+    talkBtn.addEventListener("click", async () => {
+      await unlockAudio();
+
+      if(isStarting) return;
+
+      if(isListening){
+        stopRecognition();
+      }else{
+        startRecognition();
+      }
+    });
+
+    peepBtn.addEventListener("click", async () => {
+      await unlockAudio();
+      setStatus("ぴー");
+      setHeard("ぴー");
+      flashPet();
+      await playPeep();
+      scheduleAutoTalk();
+    });
+
+    document.addEventListener("visibilitychange", () => {
+      if(document.hidden && isListening){
+        stopRecognition();
+      }
+    });
+
+    window.addEventListener("online", async () => {
+      setStatus("待機中");
+      await loadBlockedWords();
+      await loadOnlineMemory();
+      scheduleAutoTalk();
+    });
+
+    window.addEventListener("offline", () => {
+      setStatus("待機中");
+      blockedWords = [];
+      scheduleAutoTalk();
+    });
+
+    async function init(){
+      await unlockAudio();
+      initRecognition();
+
+      if(navigator.onLine){
+        await loadBlockedWords();
+        await loadOnlineMemory();
+      }
+
+      scheduleAutoTalk();
+    }
+
+    init();
+  </script>
 </body>
 </html>

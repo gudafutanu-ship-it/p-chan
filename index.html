@@ -1,84 +1,394 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>読み上げテスト</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+  <title>ピーちゃん音声テスト</title>
   <style>
+    :root{
+      --bg1:#fffdf7;
+      --bg2:#f7f2e8;
+      --text:#443c33;
+      --sub:#7a6f63;
+      --accent:#f2b84b;
+      --line:#eadfce;
+      --shadow:0 10px 30px rgba(80,60,20,.12);
+    }
+    *{box-sizing:border-box}
     body{
-      font-family: sans-serif;
-      padding:24px;
-      background:#f7f7f7;
+      margin:0;
+      font-family:"Hiragino Kaku Gothic ProN","Yu Gothic","Meiryo",system-ui,sans-serif;
+      color:var(--text);
+      background:radial-gradient(circle at top, var(--bg1), var(--bg2));
+      min-height:100vh;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      padding:16px;
+    }
+    .app{
+      width:min(100%, 560px);
+      background:rgba(255,255,255,.88);
+      backdrop-filter: blur(8px);
+      border:1px solid rgba(255,255,255,.6);
+      border-radius:28px;
+      box-shadow:var(--shadow);
+      overflow:hidden;
+    }
+    .top{
+      padding:20px 18px 8px;
+      text-align:center;
+    }
+    h1{
+      margin:0;
+      font-size:1.6rem;
+    }
+    .sub{
+      margin:8px 0 0;
+      color:var(--sub);
+      line-height:1.6;
+      min-height:3em;
+    }
+    .bird-wrap{
+      padding:8px 18px 6px;
+      display:flex;
+      justify-content:center;
+    }
+    .bird-area{
+      width:100%;
+      max-width:320px;
+      aspect-ratio:1 / 1;
+      background:#fffaf1;
+      border:1px solid var(--line);
+      border-radius:24px;
+      overflow:hidden;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+    }
+    #bird{
+      width:92%;
+      height:92%;
+      object-fit:contain;
+      transition:transform .25s ease, opacity .2s ease;
+    }
+    .controls{
+      padding:14px 16px 12px;
+      display:grid;
+      gap:12px;
     }
     button{
-      width:100%;
-      font-size:24px;
-      padding:20px;
+      appearance:none;
       border:none;
-      border-radius:16px;
-      background:#f2b84b;
+      border-radius:18px;
+      padding:18px;
+      font-size:1.06rem;
+      font-weight:700;
+      cursor:pointer;
+      box-shadow:0 6px 18px rgba(0,0,0,.08);
     }
-    #log{
-      margin-top:20px;
+    .wake-btn{
+      background:linear-gradient(180deg,#ffd774,var(--accent));
+      color:#4a3310;
+    }
+    .test-btn{
+      background:#8f8f8f;
+      color:#fff;
+    }
+    .small-row{
+      display:grid;
+      grid-template-columns:1fr 1fr;
+      gap:10px;
+    }
+    .small-btn{
       background:#fff;
-      border:1px solid #ddd;
-      border-radius:12px;
-      padding:16px;
-      white-space:pre-wrap;
-      font-size:18px;
+      color:var(--text);
+      border:1px solid var(--line);
+      box-shadow:none;
+      padding:14px 12px;
+      font-size:.95rem;
+    }
+    .panel{
+      margin:0 16px 16px;
+      background:#fffdfa;
+      border:1px solid var(--line);
+      border-radius:18px;
+      padding:14px;
+    }
+    .panel h2{
+      margin:0 0 10px;
+      font-size:1rem;
+    }
+    .line{
+      font-size:.95rem;
+      line-height:1.7;
+      word-break:break-word;
+      margin:6px 0;
+    }
+    .ok{ color:#0a6b2e; }
+    .warn{ color:#9b5c00; }
+    .mono{
+      font-family:ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      font-size:.9rem;
+    }
+    @media (max-width:420px){
+      .small-row{ grid-template-columns:1fr; }
+      button{ font-size:1rem; }
     }
   </style>
 </head>
 <body>
-  <button id="btn">押して読む</button>
-  <div id="log">まだです</div>
+  <div class="app">
+    <div class="top">
+      <h1>ピーちゃん音声テスト</h1>
+      <div id="sub" class="sub">まず「音声準備」を押してください。<br>そのあと、いろいろな声を試します。</div>
+    </div>
+
+    <div class="bird-wrap">
+      <div class="bird-area">
+        <img id="bird" src="listen.jpg" alt="ピーちゃん">
+      </div>
+    </div>
+
+    <div class="controls">
+      <button id="wakeBtn" class="wake-btn">音声準備</button>
+      <button id="test1Btn" class="test-btn">テスト1：ぴーちゃん</button>
+
+      <div class="small-row">
+        <button id="test2Btn" class="small-btn">テスト2：おはよう</button>
+        <button id="test3Btn" class="small-btn">テスト3：かわいい</button>
+      </div>
+
+      <div class="small-row">
+        <button id="voiceBtn" class="small-btn">voice一覧を確認</button>
+        <button id="clearBtn" class="small-btn">表示を消す</button>
+      </div>
+    </div>
+
+    <div class="panel">
+      <h2>結果</h2>
+      <div id="log">
+        <div class="line">まだ試していません。</div>
+      </div>
+    </div>
+  </div>
+
+  <audio id="peepAudio" src="p_chan.mp3" preload="auto" playsinline webkit-playsinline></audio>
 
   <script>
+    const bird = document.getElementById("bird");
+    const sub = document.getElementById("sub");
     const log = document.getElementById("log");
-    const btn = document.getElementById("btn");
+    const peepAudio = document.getElementById("peepAudio");
 
-    function write(msg){
-      log.textContent += "\n" + msg;
+    const wakeBtn = document.getElementById("wakeBtn");
+    const test1Btn = document.getElementById("test1Btn");
+    const test2Btn = document.getElementById("test2Btn");
+    const test3Btn = document.getElementById("test3Btn");
+    const voiceBtn = document.getElementById("voiceBtn");
+    const clearBtn = document.getElementById("clearBtn");
+
+    let audioReady = false;
+    let voiceReady = false;
+
+    function addLog(text, cls = "") {
+      const div = document.createElement("div");
+      div.className = `line ${cls}`.trim();
+      div.textContent = text;
+      log.prepend(div);
     }
 
-    btn.addEventListener("click", () => {
-      if (!("speechSynthesis" in window)) {
-        write("speechSynthesis なし");
-        return;
-      }
+    function setSub(text){
+      sub.innerHTML = text;
+    }
 
+    function setBirdActive() {
+      bird.style.transform = "scale(1.03)";
+      setTimeout(() => {
+        bird.style.transform = "scale(1)";
+      }, 220);
+    }
+
+    async function playPeep() {
+      try {
+        peepAudio.pause();
+        peepAudio.currentTime = 0;
+        const p = peepAudio.play();
+        if (p && typeof p.then === "function") await p;
+        return true;
+      } catch (e) {
+        addLog("ピー音失敗: " + String(e), "warn");
+        return false;
+      }
+    }
+
+    function getJapaneseVoice() {
       const synth = window.speechSynthesis;
       const voices = synth.getVoices();
 
-      write("voices数: " + voices.length);
-
-      const u = new SpeechSynthesisUtterance("こんにちは ぴーちゃんです");
-      u.lang = "ja-JP";
-      u.rate = 0.9;
-      u.pitch = 1.1;
-      u.volume = 1.0;
-
       const jaVoice =
+        voices.find(v => v.name.includes("Kyoko")) ||
         voices.find(v => v.lang === "ja-JP") ||
         voices.find(v => v.lang && v.lang.startsWith("ja")) ||
         null;
 
-      if (jaVoice) {
-        u.voice = jaVoice;
-        write("voice: " + jaVoice.name + " / " + jaVoice.lang);
-      } else {
-        write("日本語voiceなし");
+      return { jaVoice, voices };
+    }
+
+    function speakBird(text) {
+      if (!("speechSynthesis" in window)) {
+        addLog("speechSynthesis 非対応", "warn");
+        return false;
       }
 
-      u.onstart = () => write("onstart");
-      u.onend = () => write("onend");
-      u.onerror = (e) => write("onerror: " + (e.error || "unknown"));
+      const synth = window.speechSynthesis;
 
-      synth.cancel();
-      synth.resume();
-      synth.speak(u);
+      const actuallySpeak = () => {
+        const { jaVoice, voices } = getJapaneseVoice();
 
-      write("speak実行");
+        addLog("voices数: " + voices.length, "mono");
+
+        const utter = new SpeechSynthesisUtterance(text);
+        utter.lang = "ja-JP";
+        utter.rate = 1.15;   // 少し早口
+        utter.pitch = 1.85;  // 高めでインコっぽく
+        utter.volume = 1.0;
+
+        if (jaVoice) {
+          utter.voice = jaVoice;
+          addLog("使用voice: " + jaVoice.name + " / " + jaVoice.lang, "ok");
+        } else {
+          addLog("日本語voiceなし。既定voiceで試します", "warn");
+        }
+
+        utter.onstart = () => {
+          voiceReady = true;
+          setBirdActive();
+          addLog("読み上げ開始: " + text, "ok");
+        };
+
+        utter.onend = () => {
+          addLog("読み上げ終了", "ok");
+        };
+
+        utter.onerror = (e) => {
+          addLog("読み上げエラー: " + (e.error || "unknown"), "warn");
+        };
+
+        try { synth.cancel(); } catch (_) {}
+        try { synth.resume(); } catch (_) {}
+
+        synth.speak(utter);
+
+        setTimeout(() => {
+          try { synth.resume(); } catch (_) {}
+        }, 100);
+
+        setTimeout(() => {
+          try { synth.resume(); } catch (_) {}
+        }, 300);
+      };
+
+      const voicesNow = synth.getVoices();
+
+      if (voicesNow.length === 0) {
+        addLog("voices未準備 → 読み込み待ち", "warn");
+
+        synth.onvoiceschanged = () => {
+          addLog("voicesロード完了", "ok");
+          actuallySpeak();
+        };
+
+        setTimeout(() => {
+          if (synth.getVoices().length > 0) {
+            actuallySpeak();
+          } else {
+            addLog("voicesがまだ0です", "warn");
+          }
+        }, 400);
+      } else {
+        actuallySpeak();
+      }
+
+      return true;
+    }
+
+    async function prepareAudioAndVoice() {
+      setSub("音声を準備しています…");
+
+      try {
+        peepAudio.pause();
+        peepAudio.currentTime = 0;
+        const p = peepAudio.play();
+        if (p && typeof p.then === "function") await p;
+        peepAudio.pause();
+        peepAudio.currentTime = 0;
+        audioReady = true;
+        addLog("音声準備OK", "ok");
+      } catch (e) {
+        addLog("音声準備失敗: " + String(e), "warn");
+      }
+
+      if ("speechSynthesis" in window) {
+        try {
+          const synth = window.speechSynthesis;
+          synth.cancel();
+          synth.resume();
+
+          const warm = new SpeechSynthesisUtterance("ぴ");
+          warm.lang = "ja-JP";
+          warm.rate = 1.0;
+          warm.pitch = 1.4;
+          warm.volume = 0.01;
+
+          warm.onstart = () => addLog("読み上げ準備 onstart", "ok");
+          warm.onend = () => addLog("読み上げ準備 onend", "ok");
+          warm.onerror = (e) => addLog("読み上げ準備エラー: " + (e.error || "unknown"), "warn");
+
+          synth.speak(warm);
+        } catch (e) {
+          addLog("読み上げ準備失敗: " + String(e), "warn");
+        }
+      }
+
+      setSub("準備できました。<br>次にテスト1〜3を押して、どれがいちばんピーちゃんらしいか確認してください。");
+    }
+
+    async function runTest(text) {
+      await playPeep();
+      setTimeout(() => {
+        speakBird(text);
+      }, 250);
+    }
+
+    wakeBtn.addEventListener("click", prepareAudioAndVoice);
+
+    test1Btn.addEventListener("click", () => {
+      runTest("ぴーちゃん！");
+    });
+
+    test2Btn.addEventListener("click", () => {
+      runTest("ぴーちゃん おはよ！");
+    });
+
+    test3Btn.addEventListener("click", () => {
+      runTest("ぴーちゃん かわい！");
+    });
+
+    voiceBtn.addEventListener("click", () => {
+      if (!("speechSynthesis" in window)) {
+        addLog("speechSynthesis 非対応", "warn");
+        return;
+      }
+      const voices = window.speechSynthesis.getVoices();
+      addLog("voice一覧（先頭10件）", "ok");
+      voices.slice(0, 10).forEach(v => {
+        addLog(`${v.name} / ${v.lang}`, "mono");
+      });
+    });
+
+    clearBtn.addEventListener("click", () => {
+      log.innerHTML = '<div class="line">表示を消しました。</div>';
     });
   </script>
 </body>
